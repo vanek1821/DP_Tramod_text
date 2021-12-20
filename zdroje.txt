@@ -1,0 +1,11 @@
+https://www.vut.cz/www_base/zav_prace_soubor_verejne.php?file_id=119353 <- ve zdrojích zajímavé publikace
+
+https://www.ijert.org/research/a-study-of-extracttransform-load-etl-processes-IJERTCONV3IS18007.pdf
+
+HOWSON, Cindi. Successful business intelligence: secrets to making BI a
+ killer app. New York: McGraw-Hill, c2008, xii, 244 p. ISBN 00-714-9851-6
+
+Inmon, Bill (1992). Building the Data Warehouse. Wiley. ISBN 0-471-56960-7.
+
+
+Ralph Kimball and Joe Caserta. The Data Warehouse ETL Toolkit: Practical Techniques for Extracting, Cleaning, Conforming, and Delivering Data. Wiley, 1st edition, 2004.
