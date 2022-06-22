@@ -1,0 +1,127 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% Vzor pro sazbu kvalifikační práce
+%
+% Západočeská univerzita v Plzni
+% Fakulta aplikovaných věd
+% Katedra informatiky a výpočetní techniky
+%
+% Petr Lobaz, lobaz@kiv.zcu.cz, 2016/03/14
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Možné jazyky práce: czech, english
+% Možné typy práce: BP (bakalářská), DP (diplomová), PRJ5 (Projekt 5)
+\documentclass[czech,DP]{thesiskiv}
+
+% Definujte údaje pro vstupní strany
+%
+% Jméno a příjmení; kvůli textu prohlášení určete, 
+% zda jde o mužské, nebo ženské jméno.
+\author{Vaněk Jakub}
+\declarationmale
+
+%alternativa: 
+%\declarationfemale
+
+% Název práce
+\title{ETL nástroj pro konverzi OpenStreetMap dat do datové struktury nástroje TrafficModeller}
+
+% 
+% Texty abstraktů (anglicky, česky)
+%
+\abstracttexten{
+ETL tool for conversion of OpenStreetMap data to Traffic Modeller tool data structure.
+Goal of this thesis is to create data for Traffic Modeller tool using OpenStreetMap data. This thesis describes and uses knowledge aboud geographic data and ETL tools. In the opening part geographic data, ETL process and tools relevant for this thesis are introduced. In the later part implementation design and final solution is described.}
+
+\abstracttextcz{Cílem této práce bude implementovat nástroj vykonávající konverzní algoritmus mezi daty s datovou strukturou OpenStreetMap a nástrojem TrafficModeller. V úvodní části jsou představena geografická data, ETL proces a datové struktury nástrojů relevantních pro tuto práci. Dále je popsána návrh implementace a finální řešení problému.}
+
+% Na titulní stranu a do textu prohlášení se automaticky vkládá 
+% aktuální rok, resp. datum. Můžete je změnit:
+%\titlepageyear{2016}
+%\declarationdate{1. března 2016}
+
+% Ve zvláštních případech je možné ovlivnit i ostatní texty:
+%
+%\university{Západočeská univerzita v Plzni}
+%\faculty{Fakulta aplikovaných věd}
+%\department{Katedra informatiky a výpočetní techniky}
+%\subject{Diplomová práce}
+%\titlepagetown{Plzeň}
+%\declarationtown{Plzni}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% DODATEČNÉ BALÍČKY PRO SAZBU
+% Jejich užívání či neužívání záleží na libovůli autora 
+% práce
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Zařadit literaturu do obsahu
+\usepackage[nottoc,notlot,notlof]{tocbibind}
+
+% Umožňuje vkládání obrázků
+\usepackage[pdftex]{graphicx}
+
+% Odkazy v PDF jsou aktivní; navíc se automaticky vkládá
+% balíček 'url', který umožňuje např. dělení slov
+% uvnitř URL
+\usepackage[pdftex]{hyperref}
+\hypersetup{colorlinks=true,
+  unicode=true,
+  linkcolor=black,
+  citecolor=black,
+  urlcolor=black,
+  bookmarksopen=true}
+
+% Při používání citačního stylu csplainnatkiv
+% (odvozen z csplainnat, http://repo.or.cz/w/csplainnat.git)
+% lze snadno modifikovat vzhled citací v textu
+\usepackage[numbers, sort&compress]{natbib}
+\usepackage{svg}
+\usepackage{float}
+\usepackage{colortbl}
+\usepackage{booktabs}
+\usepackage{hhline}
+\usepackage{gensymb}
+\usepackage{listings}
+\usepackage{amssymb}
+\usepackage{comment}
+\usepackage{rotating}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% VLASTNÍ TEXT PRÁCE
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{document}
+%
+\maketitle
+\pagestyle{empty}
+
+\tableofcontents
+\pagestyle{plain}
+
+\addtocontents{toc}{
+	\protect\thispagestyle{empty}
+}
+
+\thispagestyle{empty}
+\setcounter{page}{0}
+\input{tex/uvod.tex}
+\input{tex/ETL.tex}
+\input{tex/TraModOSM.tex}
+\input{tex/navrh_nastroje.tex}
+\input{tex/implementace.tex}
+\input{tex/Uzivatelska_prirucka.tex}
+\input{tex/vysledky.tex}
+\input{tex/zaver.tex}
+
+\bibliographystyle{csplainnatkiv}
+{\raggedright\small
+\bibliography{literatura}
+}
+
+\end{document}

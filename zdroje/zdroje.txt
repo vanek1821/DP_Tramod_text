@@ -1,0 +1,23 @@
+https://www.vut.cz/www_base/zav_prace_soubor_verejne.php?file_id=119353 <- ve zdrojích zajímavé publikace
+
+https://www.ijert.org/research/a-study-of-extracttransform-load-etl-processes-IJERTCONV3IS18007.pdf
+
+HOWSON, Cindi. Successful business intelligence: secrets to making BI a
+ killer app. New York: McGraw-Hill, c2008, xii, 244 p. ISBN 00-714-9851-6
+
+Inmon, Bill (1992). Building the Data Warehouse. Wiley. ISBN 0-471-56960-7.
+
+
+Ralph Kimball and Joe Caserta. The Data Warehouse ETL Toolkit: Practical Techniques for Extracting, Cleaning, Conforming, and Delivering Data. Wiley, 1st edition, 2004.
+
+
+http://unigis.sbg.ac.at/files/Mastertheses/Full/1493.pdf
+
+Harmonizace dat: 
+
+- ČERBA, O. et al. 2008. Projekt Humboldt: cesta k implementaci ESDI. GIS Ostrava 2008. Dostupné z: http://gis.vsb.cz/GIS_Ostrava/GIS_Ova_2008/sbornik/Lists/Papers/015.pdf.
+- FICHTINGER, A., KLIEN, E., GIGER, C. 2009. Challenges in Geospatial Data Harmonisation: Examples and Approaches from the HUMBOLDT project. AGILE Workshop 2009. Dostupné z: http://www.esdi-humboldt.eu/files/agile2009/humboldt_keynote.pdf.
+- GEDRANGE, C., SEQUEIRA, M., NEUBERT, M. 2009. Cross-Border Harmonisation of Spatial Base Data –an Example from a German-Czech Project. 12th AGILE International Conference Pre-Conference Workshops Hannover, June 2009. Dostupné z: http://www.esdi-humboldt.org/files/agile2009/gedrange2009_cross-border_harmonisation.pdf.
+- GIGER, C. 2008. Data harmonisation processes in HUMBOLDT. Humboldt Consortium, 2008. Dostupné z: http://www.ec-gis.org/Workshops/inspire_2008/presentations/InspireConference_HUMBOLDT_WS_Giger.pdf.
+- VILLA, P., REITZ, T., GOMARASCA, M.A. 2008. Humboldt Project for Data Harmonisation in the Framework of GMES and ESDI: Introduction and Early Achievements. Dostupné z: http://www.isprs.org/congresses/beijing2008/proceedings/4_pdf/303.pdf.
+- XU, Z., LEE, Y.C. 2002. Semantic Heterogeneity of Geodata.

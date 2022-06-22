@@ -1,0 +1,231 @@
+\chapter{Geografická data využívaná v práci}
+\label{chapter:geograficka_data_vyuzivana_v_praci}
+
+Diplomová práce se zabývá prací s geografickými daty. V této kapitole jsou data definována, jsou zde popsány modely, které se využívají k jejich reprezentaci a jejich datové struktury. Dále jsou v kapitole popsány přistupy k harmonizaci dat. 
+
+\textbf{http://geomatika.kma.zcu.cz/studium/sgg/Materialy/Vlastnosti\_prostorovych\_dat\_a\_harmonizace.pdf}
+
+\section{Definice}
+\label{section:geograficka_data_definice}
+
+\textbf{http://geomatika.kma.zcu.cz/studium/sgg/Materialy/data.pdf}
+
+Data popisující prostorové informace nazýváme geografická data. Taková data se skládají ze dvou složek \textbf{https://kgm.zcu.cz/studium/ugi/elearning/index1.htm}. První složkou je tzv. popisná složka. Tato část dat popisuje vlastnosti reálných objektů. Druhou složkou je pak složka prostorová obsahující prostorové určení objektu. Tato data v sobě uchovávají informace o poloze, tvaru a vztazích mezi jevy reálného světla vyjádřené zpravidla formou souřadnic. Jsou to jakákoliv data obsahující formální polohovou referenci vztaženou k zemskému povrchu. 
+
+\section{Reprezentace geodat}
+\label{section:reprezentace_geodat}
+
+Geografická data obsahují tři základní typy informací: 
+
+\begin{itemize}
+  \item prostorová informace - vyjadřuje polohu objektu a jeho tvar
+  \item popisná informace - další vlastnosti popisující objekt např.: název, adresa, teplota, tloušťka drátu apod.
+  \item časová informace - pokud je použita časová informace, přidává systému dynamickou vlastnost, zaznamenává tedy čas změn
+  \end{itemize}
+
+Tyto informace je možné reprezentovat analogově na mapě i digitálně v informačním systému.
+
+Prostorová složka geografických dat je reprezentována pomocí mapových elementů. Ukládá se jejich umíštění a tvar v prostoru, tedy geometrie. Popisná informace se na mapách reprezentuje pomocí kartografických vyjadřovacích prostředků (barvy, typy a tvary symbolů a čar, nápisy…). Můžeme říct, že charakteristika objektu (tj. jeho popisná informace) je na mapě reprezentována různým grafickým vyjádřením v závislosti na hodnotě atributu, např: je-li komunikace dálnicí, je vyjádřena tlustou žlutou čarou, je-li silnicí 1. třídy, je vyjádřena tlustou červenou čarou, která se postupně ztenčuje v závislosti na snižování třídy silnice. 
+
+\textbf{https://www.natur.cuni.cz/geografie/geoinformatika-kartografie/ke-stazeni/projekty/moderni-geoinformacni-metody-ve-vyuce-gis-a-kartografie/prostorova-data/} 
+
+V digitální formě jsou geografická data obvykle reprezentována rastrovou nebo vektorovou formou. Rastrová reprezentace (více např. viz \textbf{https://kgm.zcu.cz/studium/ugi/elearning/index1.htm}) není v práci nijak využívána, není v ní tedy dále popisována. Nástroje používané v diplomové práci využívají model vektorový, který je dále popsán.
+
+\subsection{Reprezentace pomocí vektorů}
+\label{subsection:reprezentace_pomoci_vektoru}
+
+Vektorová reprezentace se zaměřuje na popis jednotlivých geografických prvků pomocí úseků křivek s danou velikostí a směrem - tedy vektorů. K reprezentaci všech elementů jsou využity tři základní typy vektorových primitiv, pomocí kterých lze sestavit složitější mapové elementy. Jsou jimi bod, linie a plocha.
+
+\begin{itemize}
+  \item bod - reprezentují bezrozměrné objekty, nebo objekty jejichž rozměr je tak malý, že nemá smysl jej reprezentovat plochou, např. sloup veřejného osvětlení 
+  \item linie - reprezentuje objekty jako řeky, silnice, potrubí, vedení, tedy objekty tak úzké, že je v měřítku mapy není vhodné reprezentovat plochami nebo také objekty, které nemají definovanou šířku (vrstevnice, …).
+  \item plocha - reprezentuje objekty, jejichž hranice uzavírá nějakou homogenní oblast (například jezera, lesy, zastavěná plocha, …).
+  \end{itemize} 
+
+Prostorová složka jednotlivých mapových elementů je vyjádřena pomocí těchto primitiv. Jsou definovány svými souřadnicemi v prostoru. Linie (Line) je sestavena sekvencí sousedících úseček. Tyto úsečky jsou spojovány v mezilehlých bodech (vertex) a mají počáteční a konečný uzel (node). Polygony jsou pak uzavřené linie, či uzavřený řetězech linií. Takový element má první a poslední uzel identický. 
+
+K odvození prostorových vztahů však počítači nestačí jednotlivé elementy. Je třeba zavádět topologii. Topologie je způsob vyjádření vztahu mezi jednotlivými elementy \textbf{https://kgm.zcu.cz/studium/ugi/elearning/index1.htm}. Výhodami topologie je například efektivnější uložení dat, či efektivnější práci s daty pro algoritmy, které nevyužívají prostorová data, ale pouze vztahy mezi jednotlivými elementy. 
+
+Popisná složka dat je vyjádřena skupinou atributů každého záznamu. Atributy jednotlivých elementů silně závisí na elementu, který popisují. Tyto atributy mohou nabývat nejrůznějších hodnot a slouží k popisu vlastností elementu. Název atributu by měl odrážet vlastnost kterou popisuje. Skupiny atributů mohou být libovolně podrobné a do detailu popisovat skutečné vlastnosti elementů. 
+
+\subsection{Struktury vektorových datových modelů}
+\label{subsection:struktury_vektorovych_modelu}
+
+Existuje několik datových modelů, ve kterých jsou geografické objekty uloženy. Liší se jak ve složitosti struktury, tak i v možnostech využívání topologických vztahů.
+
+\subsubsection{Špagetový model}
+\label{subsubsection:spagetovy_model}
+
+Tento model patří mezi nejjednodušší. Každý mapový objekt je v něm zanesen vlastním záznamem. Každý záznam tedy obsahuje řetězec se seznamem souřadnic bodů, které jej tvoří. Největší nevýhodou tohoto modelu je absence informací o vztazích mezi jednotlivými objekty. Jedná se tedy pouze o seznam objektů se souřadnicemi, který nemá žádnou logickou strukturu.
+
+\subsubsection{Základní topologický model}
+\label{subsubsection:zakladni_topologicky_model}
+
+Topologický model je jedním z nejpoužívanějších modelů uchovávající prostorové vztahy. V tomto modelu každá linie začíná a končí v bodě nazývaném uzel (node). V místě protnutí dvou linií vždy leží uzel. Každá část linie je uložena s odkazem na uzly a ty jsou uloženy jako soubor souřadnic x,y. Ve struktuře také uloženy identifikátory označující pravý a levý polygon vzhledem k linii. Tímto způsobem jsou zachovány základní prostorové vztahy použitelné pro analýzy. Navíc tato topologická informace umožňuje aby body, linie a polygony byly uloženy v neredundantní podobě. Tímto způsobem jsou v topologickém modelu uloženy i vztahy mezi jednotlivými objekty
+
+Nevýhodou topologického modelu je opět neuspořádanost dat. Při vyhledávání jednotlivých objektů v různých analýzách může nastat situace, kdy se budou soubory s daty procházet celé a několikrát. 
+
+\subsubsection{Hierarchický model}
+\label{subsubsection:hiearchicky_model}
+
+Tento model data ukládá v podobě logické hierarchie. Využívá samostatné tabulky pro uzly, linie a polygony. Linie pouze referencují záznamy z tabulky uzlů. Polygony pak referencují záznamy z tabulky jednotlivých linií. Hierarchický vektorový model nabízí výhody oproti topologickému modelu především při vyhledávání a manipulaci. Rozdělení polygonů, linií a bodů do různých souborů (nebo tabulek) umožní při vyhledávání použít pouze část datových struktur a tím urychluje práci.
+
+\subsubsection{Datové modely použité v práci}
+V práci jsou využívány základní liniové topologické vazby (konektivita), spolu s dalšími specifickými omezeními (směrovost, možnosti průchodu uzlem), které jsou ovšem ve zdrojových datech kódovány jinak, než v cílových. Podrobný popis datových struktur jednotlivých modelů popisuje kapitola \ref{chapter:datove_struktury_osm_tramod}.
+
+
+\section{Souřadnicové systémy}
+\label{section:souradnicove_systemy}
+
+\textbf{https://www.natur.cuni.cz/geografie/geoinformatika-kartografie/ke-stazeni/projekty/moderni-geoinformacni-metody-ve-vyuce-gis-kartografie-a-dpz/souradnicove-systemy/}
+
+Prostorová data se od těch neprostorových liší právě záznamem o své poloze. K určení této polohy využíváme souřadnicové systémy. Souřadnice v nich tvoří matematický zápis polohy objektu referencováné ke konkrétnímu místu na, nad nebo pod zemským povrchem. Díky tomuto matematickému zápisu mohou souřadnice sloužit k různým výpočtům a analýzám. Polohu každého bodu na území je tedy možné jednoznačně určit právě pomocí souřadnic. V dnešní době existuje velké množství různých souřadnicových systémů. Některé jsou globální (WGS-84) a některé se využívají pouze lokální území (na území ČR S-JTSK). Nástroje v diplomové práci využívají globální souřadnicový systém \textit{WGS-84}, který je dále popsán. Další souřadnicové systémy a jejich popis je dostupný na \url{http://epsg.io}
+
+\subsubsection{WGS-84}
+\label{subsubsection:wgs}
+
+\textit{World Geodetic System 1984} (zkratka WGS-84) je světově uznávaný geodetický standard vydaný ministerstvem obrany USA v roce 1984. Jedná se o geocentrický pravoúhlý pravotočivý systém pevně spojený se Zemí. Definuje souřadnicový systém a referenční elipsoid WGS84 pro geodézii a navigaci. Odchylky od referenčního elipsoidu pak popisují geoid EGM84. V roce 1996 byl rozšířen o zpřesněnou definici geoidu EGM96. Byl vytvořen na základě měření pozemních stanic družicového polohového systému TRANSIT a nahrazuje dřívější systémy WGS60, WGS66 a WGS72. Tento systém je spojen s reálnou Zemí prostřednictvím souboru přesných souřadnic WGS84 pozemních stanic kontrolního segmentu GPS.
+
+Polohu určíme pomocí zeměpisné délky, šířky a výšky. Šírka nabývá $0\degree-90\degree$ na sever od rovníku a $0\degree-90\degree$ na jih od rovníku. Délka pak nabývá hodnot $0\degree-180\degree$ na západ od nultého poledníku a $0\degree- 180\degree$ na východ od nultého poledníku. Nultým poledníkem ve WGS84 je IERS Reference Meridian. Leží $5.31$ úhlových vteřin východně od Prime meridian (Greenwich).
+
+\textbf{http://gnss.be/systems\_tutorial.php}
+
+\section{Geografické informační systémy}
+\label{section:GIS}
+
+Geografická data jsou využívána geografickými informačními systémy. Informační systém je soubor hardware a software na získávání, uchovávání, spojování a vyhodnocování informací. Informační systém se skládá ze zařízení na zpracování dat, systému báze dat a vyhodnocovacích programů \textbf{(Clause a Schvill 1991)}. Geografický informační systém (GIS) je tedy informační systém pracující oproti klasickým informačním systémům navíc i s prostorovou složkou dat. Také lze říci, že je výkonným nástrojem geověd, tedy že metody těchto věd umožňuje efektivně implementovat v počítačovém prostředí. GIS slouží k analýze a modelování existujícího světa. 
+
+Příklady využití GIS: 
+\begin{itemize}
+  \item mapové služby
+  \item obchod - analýza lokalit nových provozoven na základě demografických údajů, síťové analýzy rozvozu zboží ...
+  \item ochrana proti pohromám - modely povodní, směrování záchranných prostředků
+  \item distribuční společnosti - databáze kabelů, plynovodu, analýzy sítí, směrování v sítích
+  \item životní prostředí - chování ekosystémů, modely znečišťování ovzduší
+  \item státní správa, městské úřady - dopravní analýzy, volby, sčítání lidu, evidence
+  \item školy - výuka geověd
+\end{itemize}
+
+Z pohledu definice GIS je využitý nástroj OSM (viz kapitola \ref{section:OpenStreetMap}) geografický informační systém, který poskytuje mapové služby. Nástroj TraMod (viz kapitola \ref{section:TraMod}) je pak informační systém poskytující síťové analýzy nad dopravní sítí.
+
+\chapter{Principy ETL}
+\label{chapter:principy_etl}
+
+Zkratka ETL reprezentuje populární třífázový proces, při kterém jsou data z jednoho či více heterogenních zdrojů nahrána do datového skladu. Těmito třemi fázemi jsou fáze extrakce (z angl. \textit{extraction}), transformace (z angl. \textit{transform}) a zápis dat (z angl. \textit{load}). Běžným označením pro prostředky ETL je rovněž datová pumpa. 
+
+\textit{Datový sklad} je jednou ze základních komponent BI (\textit{Business Intelligence}). William Inmon datový sklad definuje takto: "\textit{A data warehouse is a subject-oriented, integrated, nonvolatile and time-variant collection of data in support of management`s decision}". Jedná se o zvláštní typ databáze, která je používána pro datové analýzy nad rozsáhlými soubory dat. Inmon ve své definici používá čtyři důležité charakteristiky takové databáze:
+\begin{itemize}
+  \item \textit{subject-oriented} - orientovaný na subjekt - Datový sklad je orientovaný na subjekt, protože poskytuje informace o konkrétním subjektu namísto probíhajících operací organizace. Těmito subjekty mohou být zákanící, dodavatelé, prodej, výnosy apod. Datový sklad se nezaměřuje na probíhající operace, ale zaměřuje se na modelování a analýzu dat za účelem rozhodování.
+  \item \textit{integrated} - integrovaný - Ze všech charakteristik je právě tato tou nejdůležitější. Data jsou do datového skladu integrována z více různých zdrojů, které mohou mít rozdílnou strukturu, názvosloví, jednotky apod.. Taková data tedy musí být očištěna a transformována tak, aby se do datového skladu nahrála v jedné konzistentní podobě a byla tak umožněna jejich analýza.  
+  \item \textit{non-volatile} - stálost - Tato charakteristika značí skutečnost, že data v datovém skladu jsou neměnná. Do datového skladu data pouze nahráváme a následně k nim přistupujeme, nikdy je však neaktualizujeme. Data jsou do datového skladu nahrávána v podobě statického záznamu, který reflektuje stav v daném čase. Pokud se tedy takový stav změní, není v databázi aktualizován, ale je nahrán nový záznam opět reflektující stav v novém čase a starý záznam je pro analytické účely v datovém skladu zachován.
+  \item \textit{time-variant} - časová variabilita - Data jsou do datového skladu nahrána tak, že reflektují stav v přesně daném čase. Tyto stavy jsou tedy v datovém skladu zachovány a tím je umožněno získat přesný stav systému v jakémkoliv okamžiku.
+\end{itemize}
+
+V současném obchodním světě se různé společnosti potýkají s roustoucím množstvím sbíraných a uchovávaných dat a s potřebou těmto datům co nejlépe porozumět. Tato data mohou být ve společnostech používána k optimalizaci firemních procesů, sledování účinnosti firemních strategií, objevování nových nevyužitých příležitostí a mnohému dalšímu. Využití dat k rozhodovacím procesům ve společnosti nazýváme \textit{Business intelligence}. Business intelligence chápeme jako soubor technologíí a procesů, které uživatelům umožňují přístup k datům a analýzu dat za účelem podpory rozhodování [Howson]. 
+
+K analýze dat je tedy nejdříve třeba vytvořit datový sklad, který je tvořen právě procesem \textit{ETL} a je hlavní komponentou BI. V následujících částech budou popsány jednotlivé fáze procesu ETL.
+
+\section{Extrakce dat}
+
+Prvním procesem, který je používán při výstavbě datového skladbu je proces zvaný \textit{extrakce}. Poté co určíme cíl datového skladu a stanovíme jeho strukturu, je třeba identifikovat zdrojové systémy, ze kterých budou data do datového skladu extrahována. Tyto zdrojové systémy se od sebe navzájem liší. Mohou se lišit například ve své struktuře, či formátu uložení. Běžnými formáty, ve kterých jsou data uložena mohou být například relační databáze, formát XML či JSON, ale může se jednat o jakékoliv jiné systémy pro uložení dat.
+
+Klíčovým požadavkem v této fázi je, aby byla všechna data ze zdrojových systémů nahrána v požadovaném čase. S tím se pojí hned několik problémů. Zdrojové systémy mohou být například dočasně nedostupné. Může se také stát, že zdrojový systém není uzpůsoben k tako rozsáhlé extrakci dat a požadovaná zátěž pro něj může být z různých důvodů nepřípustná a je třeba hledat náhradní řešení (zálohy systému, čtení pouze části dat apod.). Dalším problémem, na který je možné při extrakci dat narazit může být například příliš velký objem dat, kdy u těchto procesů není výjimkou objem dat v řádu několika GB denně.
+
+Extrakce probíhá ve dvou fázích [https://www.cs.colostate.edu/etl/papers/Thesis.pdf] . V první fázi probíhá tzv. úplná extrakce. Při této fázi jsou data extrahována poprvé a je tedy nutné je extrahovat kompletně celá. Druhá fáze je tzv. inkrementální. Tato fáze nastává ve chvíli, kdy se ve zdrojových systémech objeví nová nebo modifikovaná data. Nová nebo modifikovaná data je třeba identifikovat a odlišit od takových, které již procesem extrakce prošla dříve [Kimball]. Identifikace nových dat může být problematická. Můžeme k ní využít tři přístupy.
+
+\begin{itemize}
+  \item Logy v databázi - V této technice mohou být použity logy DBMS. Tyto logy jsou použity pro nalezení přidání nebo změny dat ve zdrojové databázi.
+  \item Triggery - Na každé tabulce ve zdrojové databázi jsou vytvořeny triggery, které jsou automaticky spuštěny při přidání či změně dat ve zdrojové databázi pomocí DML (Data Manipulation Language). 
+  \item Časová razítka - Některé databáze používají sloupce pro časová razítka, která specifikují čas ve kterém byl daný řádek naposledy modifikován. Pomocí těchto sloupců lze jednoduše identifikovat změnu ve zdrojovém systému.
+\end{itemize}
+
+Pokud však zdrojovým systémem není relační databáze, není možné takové přístupy použít. Je tedy třeba manuálně nalézt způsob, jak identifkovat přidaná či změněná data a ty následně extrahovat.
+
+Cílem této fáze je tedy identifikovat relevantní informace ve zdrojových systémech a nahrát je do jediné struktury či formátu, která je vhodná pro fázi transformace. 
+
+\section{Transformace dat}
+
+Druhým procesem je proces \textit{transformace}. Během transformace jsou data uložena do dočasného datového úložiště (Data Staging Area - DSA), kde jsou očištěna, přeformátována a spojována tak, aby vyhovovala datovému modelu cílového datového skladu. Proces transformace má dvě funkce. První funkcí je čištění dat. Transformační proces identifikuje a opravuje (nebo odstraňuje) existující problémy v datech a připraví je na další proces. Cílem je předejít snaze o transformaci neúplných, či chybných dat, které se mohou v datech vyskytovat. Data by během čištění měla být posouzena jak ze syntaktického, tak sémantického hlediska tak, aby byla validní vzhledem ke zdrojovým podmínkám. Během tohoto kroku je možné aplikovat různé přístupy k posouzení kvality dat, sloužící k detekování problémů, které se mohou v datech vyskytovat. Data jsou kontrolována pomocí různých kvalitativních pravidel, které jsou schopné detekovat poškozená data jak ze syntaktického, tak sémantického hlediska. V tabulce 3.1 je možné vidět různé příklady těchto kontrol s příklady dat, která porušují pravidla kontroly. 
+
+\begin{table}[]
+\begin{tabular}{|l|l|}
+\hline
+\textbf{Kontrola}    & \textbf{Příklad porušení pravidel}                          \\ \hline
+validní hodnoty      & datum\_narozeni=70045 není povolený formát data narození    \\ \hline
+unikátnost           & stejné rodné číslo RC='123456789' přítomno pro dvě osoby    \\ \hline
+chybějící hodnota    & hodnota pohlaví je u některých záznamu 'null'               \\ \hline
+existující reference & referencovaná nemocnice s identifikátorem '1002' neexistuje \\ \hline
+závislost hodnot     & mesto=plzen neodpovídá hodnotě psc=55000                    \\ \hline
+\end{tabular}
+\caption{Příklady porušení kvalitativních pravidel}
+\end{table}
+
+Při procesu čištění je nezbytné definovat výstup těchto kontrol. Poškozená či neúplná data nestačí pouze detekovat, ale je nutné vědět jak s nimi naložit. Data mohou být opravena, zahozena či jiným způsobem zpracována tak, aby nenarušila transformační proces. 
+
+V druhém kroku jsou poté data přeformátována a transformována tak, aby vyhovovala požadavkům cílového datového skladu. Na data je aplikována sada transformačních pravidel, která poskytují návrháři datového skladu. 
+
+\textbf{Vincent Rainardi. Building a Data Warehouse with Examples in SQL Server. Apress, 1st edition, 2008.}
+
+\section{Zápis dat}
+
+Posledním procesem je \textit{zápis} dat. Tento proces zapíše extrahovaná a transformovaná data z dočasného datového úložiště do cílového datového skladu. Procesy pro zápis dat se mohou značně lišit v závislosti na organizačních požadavcích. V některých datových skladech mohou být existující data přepisována novými daty na denní, týdenní nebo měsíční bázi, zatímco jiné datové sklady mohou uchovávat historii dat přidáváním nových dat v pravidelných intervalech. Komponenta pro zápis dat je často implementována pomocí procesů, které v celku, nebo inkrementálně nahrávají data z dočasného datového úložiště do cílového datového skladu. Během úplného zápisu jsou tak zapsána všechna data transformována v dočasném datovém úložišti. Při inkrementální zápisu jsou inkrementálně zapisována modifikovaná či přidaná data na základě logů, triggeru nebo časových razítek v dočasném datovém skladu. 
+
+\section{ETL nástroje pro zpracování geografických dat}
+
+V dnešním světě existuje velké množství různých zdrojů prostorových dat. Data těchto zdrojů se značně liší. Mohou mít odlišné datové struktury, formy zápisů dat a velké množství dalších rozdílů. Iniciativa, která vznikla na území Evropy a která si klade za cíl unifikaci dat evropských států, se nazývá direktiva INSPIRE - Infrastruktura pro prostorové informace v Evropě (Infrastructure  for  Spatial  Information  in  the  European Community). 
+
+\subsection{INSPIRE}
+
+INSPIRE je iniciativou Evropské komise. Stejnojmenná směrnice Evropské komise a Rady si klade za cíl vytvořit evropský legislativní rámec potřebný k vybudování evropské infrastruktury prostorových informací. Stanovuje obecná pravidla pro založení evropské infrastruktury prostorových dat zejména k podpoře environmentálních politik a politik, které životní prostředí ovlivňují. Hlavním cílem INSPIRE je poskytnout větší množství kvalitních a standardizovaných prostorových informací pro vytváření a uplatňování politik Společenství na všech úrovních členských států. 
+\textbf{https://geoportal.gov.cz/web/guest/about-inspire}
+
+Direktiva INSPIRE ukládá obecná pravidla pro uložení prostorových dat všech členských států Evropské Unie tak, aby byla vzájemně interoperabilní a použitelná širokou veřejností k různým prostorovým analýzám, plánování a jiných procesů souvisejícími s prostorovými daty. Členské státy dokážou poskytovat prostorová data popisující jejich území, avšak data nejsou unifikovaná a nelze k nim stejným způsobem přistupovat. Pro jednotlivé členské státy je tedy nutné data transformovat tak, aby direktivě INSPIRE vyhovovala. Proces této transformace se nazývá \textit{harmonizace dat}.
+
+\subsection{Harmonizace dat}
+
+Proces harmonizace dat umožňuje kombinovat data z různých heterogenních zdrojů (regionálních datasetů) do integrovaných, konzistentních a jednoznačných souborů dat (Evropských datasetů). Takové datasety mohou být poté jednoduše a hlavně unifikovaně využívány v kombinaci s dalšimi harmonizovanými daty jak k prohlížení, tak k různým analytickým procesům. Proces harmonizace dat je komplexní úlohou, která nemá žádné univerzální řešení, které by pokrylo všechny možné situace. Konkrétní informační systém je vždy určen mnoha faktory, jako je například uložení dat, jejich velikost a způsob harmonizace. 
+
+Nejznámějším přístupem k harmonizaci dat, který data dokáže převádět do cílené formy, je pětikrokový harmonizační proces, jinak nazývaný prostorové ETL. Tento proces má, jak název napovídá, pět kroků. Těmito kroky jsou: 
+
+\begin{enumerate}
+  \item porozumění teorie harmonizace prostorových dat - pochopení technik, které dokážou data transformovat mezi různými datovými strukturami při co nejnižší ztrátě dat
+  \item porozumění zdrojových dat - hluboké porozumění zdrojové struktury dat, jejich zápisu až na úroveň jednotlivých atributů
+  \item porozumění cílových dat - hluboké porozumění cílové struktury dat, jejich zápisu až na úroveň jednotlivých atributů
+  \item definice harmonizačních kroků - definování rozdílů mezi zdrojovou a cílovou strukturou dat, definování schémat a procesů popisující způsob konverze mezi zdrojovou a cílovou strukturou při kterých mohou nastat následující situace: 
+  \begin{itemize}
+    \item jeden cílový element může být sestaven jedním zdrojovým elementem (1:1)
+    \item jeden cílový element může být sestaven více zdrojovými elementy (1:M)
+    \item více cílových elementů může být sestaveno více zdojovými elementy (M:N)
+  \end{itemize}
+  \item realizace - implementace výše zmíněných harmonizačních kroků vlastním nebo vybraným nástrojem. 
+\end{enumerate}
+
+K realizaci se využívají tři typy software. Prvním typem jsou geografické informační systémy, tedy například software ArcGIS. Druhým typem jsou prostorové relační databáze a jejich funkce. Těmi mohou být např PostgreSQL s databází PostGIS. Třetím typem jsou potom ETL nástroje jako Spatial Data Integrator nebo Hale. Realizace je také možná vlastním nástrojem částečně využívajícím již existující nástroje.
+
+Výběr správného typu software pro realizaci harmonizace dat závisí na konkrétní úloze, zdroji dat, cílové datové struktuře a mnoha dalších faktorech. 
+
+\textbf{http://cdn.safe.com/resources/fme/Data-Harmonization-Principles-INSPIRE.pdf}
+\textbf{https://link.springer.com/article/10.1186/s40965-017-0015-6}
+\textbf{https://www.researchgate.net/publication/268464844\_TOWARDS\_INTEROPERABILITY\_OF\_SPATIAL\_PLANNING\_DATA\_5-STEPS\_HARMONIZATION\_FRAMEWORK}
+
+Specifikum ETL pro zpracování geografických dat oproti obecnému ETL je práce se specifickými, mnohdy komplikovanějšími, datovými strukturami, kde je při konverzi nutné zachovat topologii dat. Současně je součástí konverze i práce s různými souřadnicovými systémy.
+
+Harmonizace dat je tedy souborem transformačních procesů, který kombinuje data z více zdrojů. Práce k převodu dat ze zdrojové do cílové datové struktury využívá ETL přístup, kde jsou definovány transformační kroky, podle kterých jsou data převedena. Jedná se tak pouze o část harmonizace, jelikož využívá pouze jeden zdroj dat.  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

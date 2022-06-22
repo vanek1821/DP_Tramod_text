@@ -1,0 +1,218 @@
+\chapter{Zdrojový a cílový nástroj}
+
+Tato část se věnuje zdrojovému a cílovému nastroji diplomové práce. Jsou zde popsány obecné informace o jednotlivých nástrojích a příslušné datové struktury relevantní pro účely diplomové práce. 
+
+\section{Traffic Modeller}
+
+Cílem práce je transformovat data silniční sítě tak, aby vyhovovala nástroji Traffic Modeller. Nástroj Traffic Modeller, neboli \textit{TraMod}, je nástroj sloužící k modelování dopravy. Jejím uživatelům umožňuje simulovat a tak testovat různé dopravní scénáře. Nástroj je službou běžící na serveru a je možné ho užívat bez nutnosti jakékoliv instalace či znalosti jiného software modelujícího dopravu. Nástroj je možné využívat pomocí webové aplikace, která však není v současné době dostupná veřejnosti. Nástroj poskytuje API, což umožňuje vývojářům funkce nástroje integrovat do svých mobilních či desktopových aplikací. 
+
+Pro využití funkcí nástroje je potřeba jej naplnit daty. Data tohoto nástroje jsou uložena v databázi, která obsahuje několik tabulek. 
+
+\begin{itemize}
+  \item \textit{node} - tabulka vrcholů
+  \item \textit{edge} - tabulka hran
+  \item \textit{odm} - origin-destinatiom matrix
+  \item \textit{zone} - zóny reprezentující generátory dopravy
+  \item \textit{turn\_restriction} - tabulka zákazů odbočení
+\end{itemize}
+
+\begin{figure}[htbp]
+\includegraphics[width=\textwidth]{images/OSM2Tramod_diagrams/Tramod_Scheme}
+\caption{Databázový model nástroje TraMod}
+\label{obr:1}
+\end{figure}
+
+Na obrázku 1 je možné vidět databázový model reprezentující dopravní síť. 
+
+Tabulka vrcholů v nástroji označuje veškeré křižovatky. Na každém místě, kde se komunikace fyzicky kříží musí existovat v datech nástroje Traffic Modeller jeden vrchol. Vrchol obsahuje svůj identifikátor a také hodnotu geometrie, která v sobě nese geografické údaje o umíšťění vrcholu. Vrchol také existuje v bodě konce vozovky (např. na konci slepé ulice). Zde jsou uvedeny jednotlivé sloupce tabulky vrcholů: 
+
+\vspace{10pt}
+\begin{itemize}
+  \item \textit{node\_id} - identifikátor vrcholu
+  \item \textit{geometrie} - geometrie typu \textit{Point} v souřadnicovém systému WGS84
+\end{itemize}
+\vspace{10pt}
+
+Tabulka hran (\textit{edge}) obsahuje všechna spojení mezi vrcholy. Každá komunikace od křižovatky ke křižovatce je zaznamenána jednou hranou. Každá hrana obsahuje svůj identifikátor, zdrojový vrchol, cílový vrchol a geometrii. Tvoří tedy jednosměrnou orientovanou hranu. Pokud mezi dvěma vrcholy \textit{A} a \textit{B} existuje obousměrná komunikace, musí v tabulce existovat dva záznamy s unikátními identifikátory. První záznam bude mít uvedený vrchol \textit{A} jako zdrojový a vrchol \textit{B} jako cílový a druhý záznam bude mít uvedený vrchol \textit{B} jako zdrojový a vrchol \textit{A} jako cílový. Pokud je silnice mezi vrcholy \textit{A.B} jednosměrná, existuje pouze jedna hrana, která obsahuje vrchol \textit{A} jako zdrojový a \textit{B} jako cílový. Hodnota geometrie určuje polohu a tvar křivky, která příslušnou komunikaci reprezentuje. Pokud vozovka obsahuje více pruhů, je stále reprezentována pouze jednou hranou. Jedna hrana v databázi je tedy svým identifikátorem, identifikátorem zdrojového a cílového vrcholu. Obsahuje také několik dalších záznamů, které jsou uvedeny v následujícím výčtu:   
+
+\vspace{10pt}
+\begin{itemize}
+  \item \textit{edge\_id} - identifikátor vrcholu
+  \item \textit{source} - geometrie elementu
+  \item \textit{target} - geometrie elementu
+  \item \textit{capacity} - počet vozů, které mohou hranou projet za hodinu
+  \item \textit{cost} - cena za projetí této cesty (čas)
+  \item \textit{isvalid} - atribut sloužící pro plánované cesty (true = cesta existuje, false = cesta je plánována)
+  \item \textit{turn\_restriction} - zákazy, či příkazy odbočení v textové podobě
+  \item \textit{speed} - maximální povolená rychlost v km/h
+  \item \textit{road\_type} - třída vozovky
+  \item \textit{geometry} - geometrie typu \textit{LineString} v souřadnicovém systému WGS84
+\end{itemize}
+\vspace{10pt}
+
+Tabulka zákazů odbočení (turn\_restriction) obsahuje záznamy pro všechny zákazy odbočení na mapě. Obsahuje identifikátor křižovatky (vrcholu), ke kterému náleží, identifikátor zdrojové hrany a identifikátor cílové hrany. Pokud tedy nelze z komunikace (hrany) \textit{A} na křižovatce (vrcholu) \textit{X} odbočit na komunikaci \textit{B}, bude v tabulce uveden záznam s identifikátorem vrcholu \textit{X}, zdrojovou hranou \textit{A} a cílovou hranou \textit{B}. Pokud je na na jedné křižovatce zákazů více, bude pro každý zákaz v tabulce jeden záznam. Nástroj Traffic Modeller neobsahuje způsob pro uchování příkazů odbočení. Pokud se na nějaké křižovatce vyskytuje přikázané odbočení, budou zakázány všechny ostatní možnosti odbočení a tyto zákazy budou zaneseny do tabulky. Zde jsou uvedeny jednotlivé sloupce tabulky zákazů odbočení. 
+
+\begin{itemize}
+  \item \textit{node\_id} - identifikátor vrcholu 
+  \item \textit{from\_edge\_id} - zdrojová hrana
+  \item \textit{to\_edge\_id} - cílová hrana
+  \item \textit{cost} - cena za projetí křižovatky v tomto směru
+\end{itemize}
+\vspace{10pt}
+
+Tabulka zón \textit{zone} reprezentuje tzv. \textit{generátory dopravy}. Generátor dopravy je odhad počtu vozidel, které budou denně vyjíždět z oblasti jím vymezeném. Počet vozidel je odhadován na základě počtu, plochy a typu budov, které leží v jedné vymezené zóně. Generátor jednotlivých oblastí je poté přiřazen vhodné křižovatce, kterou poté nástroj TraMod využivá k modelování dopravních situací. Jednotlivé sloupce tabulky zón jsou popsány 
+
+\begin{itemize}
+  \item \textit{zone\_id} - identifikátor generátoru dopravy
+  \item \textit{node\_id} - identifikátor křižovatky s přiřazeným generátorem
+  \item \textit{trips} - odhadovaná hodnota generátoru dorpavy
+  \item \textit{geometry} - geometrie centroidu zóny typu \textit{Point} v souřadnicovém systému WGS84
+\end{itemize}
+\vspace{10pt}
+
+Jak již první dvě tabulky databáze napovídají, silnice jsou v nástroji Traffic Modeller reprezentovány grafovou strukturou. Vrcholy tohoto grafu označují křižovatky . Taková reprezentace umožňuje nástroji modelovat dopravu pomocí algoritmů užívaných pro různé grafové problémy. 
+
+
+\subsection{OpenStreetMap}
+
+OpenStreetMap (\textit{OSM}) je veřejná databáze poskytující mapová data. Je tvořena komunitou uživatelů, kteří přidávají a udržují data o silnicích, cestách, kavárnách, železničních stanicích a mnohém dalším po celém světě. Mezi přispěvateli lze najít profesionály z oblasti GIS, techniky spravující OSM, amatérské kreslíře map, či humanitární pracovníky. OSM tvoří otevřená data, která mohou být využívána k libovolným účelům, pokud je uvedeno autorství OSM a jeho přispevatelů. Pokud jsou data jakýmkoliv způsobem upravována, či rozšiřována, je možné výsledek šířit pod stejnou licencí. 
+
+https://alga.win.tue.nl/tutorials/openstreetmap/
+
+Data v OSM jsou uložena v jednoduché datové struktuře. Tato datová struktura je tvořena třemi typy elementů. Těmito typy jsou \textit{nodes} (body), \textit{ways} (cesty) a \textit{relations} (vztahy). Všechny tři typy elementů mohou mít přiřazen jeden nebo více značek (\textit{tags}), které popisují význam jednotlivých elementů. 
+
+Body (\textit{nodes}) reprezentují jednobodové elementy v mapě. Jsou definovány svým ID a zeměpisnou šířkou a délkou. Mohou reprezentovat elementy na mapě, které jsou samostatně stojící a k jejich popisu bod stačí. Mohou tak být reprezentovány například lavičky v parku, lampy apod. Význam takových bodů je určen právě pomocí značky. Body jsou také využívány k určení tvaru vícebodových elementů. V takovém případě nemusí všechny body obsahovat značku, která by určila jejich význam.
+
+Cesty (textit{ways}) reprezentují nejednobodové elementy a jsou tedy tvořeny sledem (seřazeným listem). Sled může kvůli omezení OSM obsahovat dva až dva tisíce bodů. Body mají tedy dvojí funkci. Jsou buď samostatně stojícími elementy, či součástí cest. Cesty mohou reprezentovat dva typy elementů. Prvním typem elementu jsou neuzavřené cesty (křivky). Tedy cesty jejichž první a poslední bod se neshodují. Je možné takto reprezentovat silnice, různé lesní cesty, řeky, či vedení elektrického napětí. Druhým typem elementu, který je možné cestou reprezentovat jsou uzavřené cesty (hranice polygonu). V takovém případě je první a poslední bod v cestě stejný. Tímto způsobem lze do OSM zanést například budovy, vodní plochy, či lesy. Význam cest je opět uchováván pomocí značek. Důležité je mít na paměti, že i některé silnice mohou být zaneseny pomocí cesty, která bude mít první a poslední bod stejný. Typickým příkladem je kruhový objezd. K rozlišení je nutné prozkoumat značky, které v takové chvíli musí jasně určit, zda se jedná o nějaký element vyjadřující plochu, či nějaký cyklický element.
+
+Třetím typem elementu jsou vztahy (\textit{Relations}). Vztahy jsou víceúčelovou datovou strukturou, která poisuje vztah mezi dvěma či více elementy (body, cestami, či jinými vztahy). Typickým příkladem může být seznam silnic, které dohromady tvoří například dálnici, či trasu linky městské hromadné dopravy. Dalším příkladem může být zákaz odbočení, který vyjadřuje ze které cesty není možné na kterou cestu odbočit. Jiným přikladem může být vícebodový polygon, který reprezentuje vnější hranici nějakého plošného elementu a díra v něm je popsána druhým polygonem tvořícím vnitřní hranici. Význam těchto vztahů je vždy určen pomocí značek. Typicky bude mít vztah značku \textit{type}, která určí typ tohoto vztahu. Vztahy jsou vyjádřeny seřazeným listem bodů, cest, či jiných vztahů. 
+
+K určení elementů, které cesty, vztahy a jednotlivé body reprezentují se využívají tzv. značky (tags). Značky je možné přiřadit k jednotlivým bodům i celým cestám. Značky obsahují klíč a hodnotu. Klíč je užíván k definování názvu objektu a hodnota k definování jeho hodnoty. Některé značky hodnotu nepotřebují, užívá se potom klíčové slovo \textit{yes}.
+
+Příklady značek elementů:
+
+\begin{itemize}
+  \item jednobodové - \textit{shop=supermarket}
+  \item neuzavřené cesty (křivky) - \textit{highway=motorway}
+  \item uzavřené cesty (polygony) - \textit{building=yes}
+\end{itemize}
+
+Portál openstreetmap.org umožňuje zobrazit značky jednotlivých elementů. Značky jednotlivých elementů jsou uživateli zobrazeny po kliknutí na element pomocí funkce \textit{Průzkum prvků}. 
+
+K využití těchto dat v nástroji Traffic Modeller je důležité prozkoumat způsob, jakým OSM reprezentuje data týkající se pozemních komunikací. Data v OSM jsou reprezentována následujícím způsobem. Každá pozemní komunikace je reprezentována jednou nebo více cestami (mohou být součástí většího spoje). Pokud se dvě komunikace fyzicky kříží tak, že je možné dostat se z jedné na druhou, existuje v místě jejich překřížení vrchol. Pokud se však  cesty fyzicky nekříží, například z důvodu existence mostu, který je druhou cestou podjížděn, v bodě překřížení těchto hran vrchol neexistuje. Pokud má pozemní komunikace více pruhů, které nejsou odděleny žádnou fyzickou bariérou, je v datech zanesena jako jedna cesta. Pokud mezi sebou jednotlivé pruhy mají fyzickou bariéru (dálnice), jsou v OSM zaneseny jako dvě jednotlivé cesty.
+
+Dále je ke správnému fungování důležité určit, jakým směrem cesty vedou. Cesty jsou reprezentovány sledem dvěma a více bodů. Pokud existuje komunikace mezi vrcholy \textit{A} a \textit{B}, bude existovat cesta \textit{\{A,B\}} nebo cesta \textit{\{B,A\}}, ale nikoliv obě. Takovou cestu můžeme v grafu poté chápat jako neorientovanou hranu mezi dvěma vrcholi. Pokud je však komunikace jednosměrná, cesta bude označena značkou \textit{oneway=yes}. Takové označení využívají veškeré jednosměrné komunikace, včetně obousměrných komunikací oddělených fyzickou bariérou. Pokud cesta obsahuje tuto značku, její směr je poté dán pořadím uzlů, které cestu tvoří. 
+
+\textbf{PLACEHOLDER:} popis budov, jejich relations apod. 
+
+
+\subsection{Odlišnosti}
+
+Z předchozích částí je jasné, že se od sebe struktury dat databáze OSM a nástroje Traffic Modeller navzájem liší. Tyto rozdíly je nutné identifikovat a určit, jakým způsobem musí být data z databáze OSM transformována tak, aby vyhovovala nástoji Traffic Modeller. 
+
+\subsubsection{Silniční síť}
+
+Základním nedostatkem Open Street Map je, že silniční síť v těchto datech není směrovatelná (z angl. \textit{routable}). Tento nedostatek je znázorněn na příkladě na obrázku: 
+
+\begin{figure}[ht]
+\includegraphics[width=\linewidth]{images/unroutable}
+\end{figure}
+
+Na obrázku je vidět 7 bodů: \textit{\{1, 2, 3, 4, 5, 6, 7\}}. Tyto body reprezentují body na silnici. V datech jsou také zaneseny dvě cesty. Cesta \textit{A: \{1, 2, 3, 4\}} a cesta \textit{B: \{5, 6, 2, 7\}}. Takováto data tedy mohou reprezentovat jednoduchou křižovatku. Díky první cestě například víme, jakým způsobem se dostat z bodu \textit{\{1\}} do bodů \textit{\{2, 3\}} nebo \textit{\{4\}}. Problém vzniká ve chvíli, kdy bychom se chtěli z bodu \textit{\{1\}} dostat například do bodu \textit{\{7\}}. Je zřejmé, že do bodu \textit{\{7\}} je možńe se dostat přes bod \textit{\{2\}} a cesta by tedy byla složená z bodů \textit{\{1, 2, 7\}}. Bohužel však v datech Open Street Map taková cesta být nemusí a v datech tedy neexistuje způsob, jakým se z bodu \textit{\{1\}} dostat do bodu \textit{\{7\}}. Taková síť je tedy nesměrovatelná.
+
+Základním předpokladem nístroje Traffic Modeller je však směrovatelná síť. Tedy síť, ve které bude možné najít cestu z libovolného zdrojového bodu, do libovolného cílového bodu. Pro tyto účely je možné využít nástroj \textit{OSM2Po}. 
+
+OSM2Po je volně dostupný nástroj. Tento nástroj je současně konvertorem a směrovacím enginem. Dokáže parsovat data z OSM a vytvořit z nich směrovatelnou síť. Jeho výstupem jsou sql soubory pro databázi PostGIS, které společně reprezentují graf. Těmito soubory jsou: 
+
+\begin{itemize}
+  \item uzly - v souboru \textit{<název\_území>\_2po\_vertex.sql} 
+  \item hrany - v souboru \textit{<název\_území>\_2po\_4pgr.sql} 
+\end{itemize} 
+
+Každý z těchto souborů tvoří příslušnou tabulku v databázi.
+
+Tabulka uzlů:
+\begin{itemize}
+  \item \textit{id} - identifikátor uzlu
+  \item \textit{clazz} - 
+  \item \textit{osm\_id} - původní id elementu v OSM
+  \item \textit{osm\_name} - 
+  \item \textit{ref\_count} - 
+  \item \textit{restrictions} - zákazy, či příkazy odbočení
+  \item \textit{GeometryColumn} - kód geometrie elementu
+\end{itemize}
+
+Záznamy v tabulce uzlů reprezentují veškerá místa, kde se vozovka fyzicky kříží či končí. Reprezentují tedy veškeré křižovatky, sjezdy z dálnic, konce slepých ulic a další. Ve výstupním vygenerovaném souboru se vyskytuje méně záznamů o uzlech, než ve zdrojovém souboru ve formátu OSM. Prvním důvodem je vybírání pouze některých elementů. V OSM mohou jednotlivé body značit krom křižovatek i budovy, zastávky a jiné jednobodové elementy na mapě, zatímco tento nástroj vyexportuje pouze body, které se týkají silniční sítě. Druhým důvodem je způsob reprezentace hran. OSM reprezentuje hrany pouze jako sled několika bodů. Tvar této hrany (křivky) je tedy určen body, ze kterých se skládá. Výstup tohoto souboru však tvar hrany určuje pomocí samostatného pole s gemoetrií elementu a nevyužívá bodů k určení tvarů. Pokud se tedy žádné vozovky v bodě nekříží, bod v místě neexistuje. 
+
+Důležitou vlastností, kterou je možné najít v každém záznamu o uzlu je záznam o tzv. \textit{Restrictions}, neboli zákazech. Tento záznam popisuje zákazy či příkazy odbočení, které se na této křižovatce vyskytují. Díky tomuto záznamu bude možné jednoduše naplnit tabulku \textit{Turn\_Restrictions} v cílovém nástroji Traffic Modeller.
+
+Tabulka hran:
+\begin{itemize}
+  \item \textit{id} - identifikátor hrany
+  \item \textit{osm\_id} - původní identifikátor elementu v OSM
+  \item \textit{osm\_name} 
+  \item \textit{osm\_meta} - 
+  \item \textit{osm\_source\_id} - původní identifikátor zdrojového uzlu hrany z OSM
+  \item \textit{osm\_target\_id} - původní identifikátor cílového uzlu hrany z OSM
+  \item \textit{clazz} - třída komunikace
+  \item \textit{flags}
+  \item \textit{source} - identifikátor zdrojového uzlu hrany odpovídající záznamům z tabulky vrcholů
+  \item \textit{target} - identifikátor cílového uzlu hrany odpovídající záznamům z tabulky vrcholů
+  \item \textit{km} - délka úseku v km
+  \item \textit{kmh} - maximální povolená rychlost na daným úseku
+  \item \textit{cost} - cena za přejetí tohoto úseku počítána jako km\/kmh
+  \item \textit{reverse\_cost} - cena za přejetí tohoto úseku v opačném směru
+  \item \textit{x1} 
+  \item \textit{x2}
+  \item \textit{y1}
+  \item \textit{y2}
+  \item \textit{GeometryColumn} - kód geometrie elementu
+\end{itemize}
+
+Záznamy v tabulce hran reprezentují veškeré úseky na vozovce od jednoho bodu k druhému. Každý záznam o úseku z vozovky je definován svým identifikátorem, zdrojovým bodem a cílovým bodem. V seznamu jsou uvedeny další informace, které v sobě záznam uchovává. Důležitou informací je směr daného úseku. Pokud je vozovka jednosměrná, vede od zdrojového k cílovému uzlu, hodnota \textit{cost} určuje čas potřebný k přejetí daného úseku a hodnota \textit{reverse\_cost} je nastavena na \textit{1000000.0}. Pokud je vozovka obousměrná, má nastavené obě hodnoty \textit{cost} i \textit{reverse\_cost}, kde hodnota \cost{cost} značí potřebný čas k přejetí úseku od zdrojového k cílovému bodu a hodnota \textit{reverse\_cost} značí čas potřebný k přejetí vozovky od cílového bodu ke zdrojovému. Tvar křivky reprezentující vozovku není narozdíl od OSM reprezentován několika body, avšak samostatnou hodnotou geometrie. 
+
+Na obrázku je vidět konverze z předchozího příkladu na datovou strukturu OSM2Po.
+
+\begin{figure}[ht]
+\includegraphics[width=\linewidth]{images/unroutable}
+\end{figure}
+
+Ze vstupního grafu nástroj OSM2Po vytvořil routovatelnou síť. Body \textit{6} a \textit
+
+cmd=tjs - What really happens:
+
+                    [2] 5                             [3] 4
+                       /                                 /
+                      6                                 +
+                      |            ___|\                |
+              [1] 1---2---3        tjs  \       [1] 1---2---+
+                      |    \       ___  /               |    \
+                      |     \         |/                |     \
+                      7      4                      [4] 5      3 [2]
+
+              1,2,3,4,5,6,7 are OSM-Nodes       [1] 1,2  (OSM-Way [1])
+              [1] OSM-Way (Nodes 1,2,3,4)       [2] 2,3  (OSM-Way [1])
+              [2] OSM-Way (Nodes 5,6,2,7)       [3] 4,2  (OSM-Way [2])
+                                                [4] 2,5  (OSM-Way [2])
+
+              OSM-Data IS NOT ROUTABLE!         OSM2PO-Data IS ROUTABLE!
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

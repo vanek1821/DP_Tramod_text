@@ -1,0 +1,85 @@
+\babel@toc {british}{}
+\babel@toc {czech}{}
+\babel@toc {british}{}
+\babel@toc {czech}{}
+\babel@toc {czech}{}
+\babel@toc {czech}{}
+ \thispagestyle {empty} 
+\contentsline {chapter}{\numberline {1}Úvod}{1}{chapter.1}%
+\contentsline {chapter}{\numberline {2}Geografická data využívaná v práci}{2}{chapter.2}%
+\contentsline {section}{\numberline {2.1}Definice}{2}{section.2.1}%
+\contentsline {section}{\numberline {2.2}Reprezentace geodat}{2}{section.2.2}%
+\contentsline {subsection}{\numberline {2.2.1}Reprezentace pomocí vektorů}{3}{subsection.2.2.1}%
+\contentsline {subsection}{\numberline {2.2.2}Struktury vektorových datových modelů}{4}{subsection.2.2.2}%
+\contentsline {subsubsection}{Špagetový model}{4}{section*.6}%
+\contentsline {subsubsection}{Základní topologický model}{4}{section*.7}%
+\contentsline {subsubsection}{Hierarchický model}{5}{section*.8}%
+\contentsline {subsubsection}{Datové modely použité v práci}{5}{section*.9}%
+\contentsline {section}{\numberline {2.3}Souřadnicové systémy}{5}{section.2.3}%
+\contentsline {subsubsection}{WGS-84}{6}{section*.10}%
+\contentsline {section}{\numberline {2.4}Geografické informační systémy}{6}{section.2.4}%
+\contentsline {chapter}{\numberline {3}Principy ETL}{8}{chapter.3}%
+\contentsline {section}{\numberline {3.1}Extrakce dat}{9}{section.3.1}%
+\contentsline {section}{\numberline {3.2}Transformace dat}{10}{section.3.2}%
+\contentsline {section}{\numberline {3.3}Zápis dat}{11}{section.3.3}%
+\contentsline {section}{\numberline {3.4}ETL nástroje pro zpracování geografických dat}{12}{section.3.4}%
+\contentsline {subsection}{\numberline {3.4.1}INSPIRE}{12}{subsection.3.4.1}%
+\contentsline {subsection}{\numberline {3.4.2}Harmonizace dat}{12}{subsection.3.4.2}%
+\contentsline {chapter}{\numberline {4}Datové struktury zdrojového a cílového nástroje}{15}{chapter.4}%
+\contentsline {section}{\numberline {4.1}Traffic Modeller}{15}{section.4.1}%
+\contentsline {subsection}{\numberline {4.1.1}Datová struktura}{16}{subsection.4.1.1}%
+\contentsline {subsubsection}{Uzly}{16}{section*.11}%
+\contentsline {subsubsection}{Hrany}{18}{section*.12}%
+\contentsline {subsubsection}{Zakázané směry}{19}{section*.13}%
+\contentsline {subsubsection}{Generátory dopravy}{19}{section*.14}%
+\contentsline {section}{\numberline {4.2}OpenStreetMap}{20}{section.4.2}%
+\contentsline {subsection}{\numberline {4.2.1}Export dat}{20}{subsection.4.2.1}%
+\contentsline {subsection}{\numberline {4.2.2}Datová struktura}{21}{subsection.4.2.2}%
+\contentsline {chapter}{\numberline {5}Návrh nástroje OSM2TraMod}{24}{chapter.5}%
+\contentsline {section}{\numberline {5.1}Využití externích modulů}{24}{section.5.1}%
+\contentsline {subsection}{\numberline {5.1.1}Silniční síť}{24}{subsection.5.1.1}%
+\contentsline {subsubsection}{Směrovatelná silniční síť - OSM2Po}{26}{section*.15}%
+\contentsline {subsubsection}{Srovnání datových struktur}{29}{section*.16}%
+\contentsline {subsection}{\numberline {5.1.2}Generátory dopravy}{30}{subsection.5.1.2}%
+\contentsline {subsubsection}{Filtrace}{30}{section*.17}%
+\contentsline {subsubsection}{Konverze}{31}{section*.18}%
+\contentsline {section}{\numberline {5.2}Návrh vlastního nástroje}{31}{section.5.2}%
+\contentsline {subsection}{\numberline {5.2.1}Proces konverze}{31}{subsection.5.2.1}%
+\contentsline {subsection}{\numberline {5.2.2}Docker}{32}{subsection.5.2.2}%
+\contentsline {subsection}{\numberline {5.2.3}Transformace}{32}{subsection.5.2.3}%
+\contentsline {subsubsection}{Tvorba jednosměrných hran z obousměrných}{34}{section*.19}%
+\contentsline {subsubsection}{Tvorba zakázaných směrů}{34}{section*.20}%
+\contentsline {subsubsection}{Tvorba generátorů dopravy}{37}{section*.21}%
+\contentsline {section}{\numberline {5.3}Návrh zpětného algoritmu}{41}{section.5.3}%
+\contentsline {chapter}{\numberline {6}Implementace}{42}{chapter.6}%
+\contentsline {section}{\numberline {6.1}Import dat}{42}{section.6.1}%
+\contentsline {subsection}{\numberline {6.1.1}Import dopravní sítě}{44}{subsection.6.1.1}%
+\contentsline {subsection}{\numberline {6.1.2}Import záznamů budov}{44}{subsection.6.1.2}%
+\contentsline {section}{\numberline {6.2}Transformace}{45}{section.6.2}%
+\contentsline {subsection}{\numberline {6.2.1}Obousměrné hrany}{45}{subsection.6.2.1}%
+\contentsline {subsection}{\numberline {6.2.2}Zakázané směry}{46}{subsection.6.2.2}%
+\contentsline {subsection}{\numberline {6.2.3}Výpočet generátorů dopravy}{48}{subsection.6.2.3}%
+\contentsline {subsubsection}{Převod geometrie}{48}{section*.22}%
+\contentsline {subsubsection}{Výpočet jednotlivých generátorů}{48}{section*.23}%
+\contentsline {subsubsection}{Přiřazení generátorů}{49}{section*.24}%
+\contentsline {section}{\numberline {6.3}Export dat}{50}{section.6.3}%
+\contentsline {section}{\numberline {6.4}Docker}{51}{section.6.4}%
+\contentsline {chapter}{\numberline {7}Uživatelská příručka}{52}{chapter.7}%
+\contentsline {section}{\numberline {7.1}Stažení dat}{52}{section.7.1}%
+\contentsline {subsubsection}{OpenStreetMap}{52}{section*.25}%
+\contentsline {subsubsection}{BBBike}{52}{section*.26}%
+\contentsline {section}{\numberline {7.2}Spuštění OSM2TraMod}{53}{section.7.2}%
+\contentsline {section}{\numberline {7.3}Import dat do nástroje TraMod}{54}{section.7.3}%
+\contentsline {chapter}{\numberline {8}Dosažené výsledky}{55}{chapter.8}%
+\contentsline {subsubsection}{Plzeňský kraj}{55}{section*.27}%
+\contentsline {subsubsection}{Krumlovsko}{56}{section*.28}%
+\contentsline {section}{\numberline {8.1}Důkaz funkcionality}{57}{section.8.1}%
+\contentsline {subsubsection}{Zakázané směry}{57}{section*.29}%
+\contentsline {chapter}{\numberline {9}Diskuze}{61}{chapter.9}%
+\contentsline {subsubsection}{Export dat OSM2Po}{61}{section*.30}%
+\contentsline {subsubsection}{API nástroje Traffic Modeller}{61}{section*.31}%
+\contentsline {subsubsection}{Hodnota generátorů dopravy}{61}{section*.32}%
+\contentsline {subsubsection}{Oblasti generátorů}{62}{section*.33}%
+\contentsline {subsubsection}{Návrh zpětného algoritmu}{62}{section*.34}%
+\contentsline {chapter}{\numberline {10}Závěr}{63}{chapter.10}%
+\contentsline {chapter}{Literatura}{64}{chapter*.35}%

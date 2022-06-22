@@ -1,0 +1,191 @@
+\chapter{Dosažené výsledky}
+
+Implementované řešení je testováno na datasetu Plzeňského kraje a jeho okolí a na datasetu území Krumlovska. Proces jednotlivých transformací odpovídá kapitole \ref{navrh_nastroje}. V této kapitole jsou u jednotlivých datasetů vypsány počty záznamů, které nástroj načítá a ve svém průběhu generuje. Na obrázcích jsou data v jednotlivých fázích zobrazena a jsou vybrána místa, na kterých je dokázána správná funkcionalita vlastně implementovaného nástroje.
+
+\subsubsection{Plzeňský kraj}
+
+Počet původních záznamů v souboru s daty OSM získaného z portálu \url{bbbike.org}:
+
+\begin{itemize}
+	\item Vrcholy - 8 277 860
+	\item Cesty - 756 646
+	\item Relace - 19 730
+\end{itemize}
+
+Nástroj OSM2Po vlastní filtrací nastavené v konfiguraci vybere záznamy týkající se silniční sítě. Z původních dat tak extrahuje 402 894 vrcholů, 62 557 cest a 521 relací. Z extrahovaných dat poté vytvoří následující počet záznamů, reprezentující směrovatelnou silniční síť.
+
+\begin{itemize}
+	\item Uzly (křižovatky) - 89 994
+	\item Hrany - 107 961
+\end{itemize}
+
+K vytvoření generátorů jsou využity záznamy budov. Filtrace probíhá nástrojem osmfilter. Původní data OSM jsou filtrována a je tak extrahován následující počet záznamů reprezentující budovy: 
+
+\begin{itemize}
+	\item Vrcholy - 2 356 698
+	\item budovy - 428 904
+\end{itemize}
+
+Vlastní nástroj během po zpracování dat vytvoří následující počet záznamů:
+
+\begin{itemize}
+	\item Uzly - 89 994
+	\item Hrany - 209 975
+	\item Zakázané směry - 710
+	\item Generátory dopravy - 681 
+\end{itemize}
+
+Z 428 904 budov aplikace nepřiřadí 272 budov. Ztracení těchto dat je dáno jiným způsobem zápisu v původním souboru OSM. Některé budovy jsou v OSM zapsány pomocí relací, které referencují cesty. Při načítání cest tedy některé nemají počáteční a konečný uzel stejný a jsou pro výpočet zahozeny. Je tedy zahozeno 0,063\% budov. Po bližším zkoumání zahozených dat bylo zjištěno, že většina z nich reprezentuje zastřešené autobusové zastávky se zanedbatelnou plochou. Takto nízká ztráta nemá na model zásadní vliv a je tedy ignorována. 
+
+V případě, že uživatel požaduje dělení oblasti na 1000 částí, aplikace vytvoří 681 generátorů. Chybějících 319 generátorů nebylo vytvořeno kvůli vymezení oblasti polygonem. Ve vytvořené mřížce, která má obdelníkový tvar tedy existovaly dlaždice, které na své vymezené ploše neobsahovaly žádná data, které by jim mohla být přiřazena. Chybějící generátory vně oblasti neexistují z důvodu neexistence budov na území, které pokrývají.
+
+Takto generovaná data jsou nahrána do databáze nástroje TraMod. 
+
+
+\subsubsection{Krumlovsko}
+
+Počet původních záznamů v souboru s daty OSM získaného z portálu \url{bbbike.org}:
+
+\begin{itemize}
+	\item Vrcholy - 1 318 491
+	\item Cesty - 116 193
+	\item Relace - 3 335
+\end{itemize}
+
+Nástroj OSM2Po z původních dat tak extrahuje 61 463 vrcholů, 10 193 cest a 206 relací. Z extrahovaných dat vytvoří následující počet záznamů, reprezentující směrovatelnou silniční síť.
+
+\begin{itemize}
+	\item Uzly (křižovatky) - 14 092
+	\item Hrany - 16 286
+\end{itemize}
+
+Počet extrahovaných záznamů reprezentující budovy: 
+
+\begin{itemize}
+	\item Vrcholy - 337 084
+	\item Budovy - 58 384
+\end{itemize}
+
+Vlastní nástroj během po zpracování dat vytvoří následující počet záznamů:
+
+\begin{itemize}
+	\item Uzly - 14 092 
+	\item Hrany - 31 732
+	\item Zakázané směry - 243
+	\item Generátory dopravy - 262
+\end{itemize}
+
+Z 58 384 budov aplikace nepřiřadí 83 budov. Je tedy zahozeno 0,142\% budov. 
+
+V případě, že uživatel požaduje dělení oblasti na 350 částí, aplikace vytvoří 262 generátorů. Chybějících 138 generátorů nebylo vytvořeno ze stejného důvodu jako u datasetu Plzeňského kraje.
+
+\section{Důkaz funkcionality}
+
+V této části jsou zobrazena data silniční sítě dokazující funkcionalitu jednotlivých transformací kapitoly \ref{subsection:transformace} před a po konverzi vlastním nástrojem.
+
+\subsubsection{Zakázané směry}
+
+Na obrázku \ref{turn_restriction_map} je vidět křižovatka mezi ulicemi Ukrajinská, Nádražní, Tyršova a U Prazdroje. Tato křižovatka obsahuje velké množství zakázaných směrů a je tedy vybrána pro dokázáni funkcionality tvorby zakázaných směrů.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{images/turn_restriction_map.png}
+\caption{vybraná křižovatka}
+\label{turn_restriction_map}
+\end{figure}
+
+Po konverzi nástrojem OSM2Po získáme data znázorněna na obrázku \ref{turn_restriction_osm2po}. Zelené linie značí hrany a černé body značí uzly. Identifikátor hrany je vepsán přímo v linii tmavší zelenou barvou, identifikátor uzlu je popsán v jeho blízkosti černou barvou. 
+
+\begin{sidewaysfigure}[htbp]
+\includegraphics[width=0.8\textwidth]{images/turn_restriction_osm2po.png}
+\caption{Data po konverzi vlastním nástrojem}
+\label{turn_restriction_osm2po}
+\end{sidewaysfigure}
+
+K ověření je využit uzel s identifikátorem 18, který po konverzi nástrojem OSM2Po obsahuje v atributu \textit{restrictions} obsahuje následující hodnotu:
+
+\begin{lstlisting}
+-69638_12-12_12-69638_69627-69625_69627-69625_69626
+-12_69626
+\end{lstlisting}
+
+Jsou tedy zakázány směry v tabulce \ref{table:zakazane_smery_osm2po}
+
+\begin{table}[htbp]
+\centering
+\begin{tabular}{|ll|}
+\hline
+\multicolumn{2}{|l|}{Zakázané směry - OSM2Po}        \\ \hline
+\multicolumn{1}{|l|}{source id} & target id \\ \hline
+\multicolumn{1}{|l|}{69638}         & 12         \\ \hline
+\multicolumn{1}{|l|}{12}         & 12         \\ \hline
+\multicolumn{1}{|l|}{69638}         & 69627         \\ \hline
+\multicolumn{1}{|l|}{69625}         & 69626         \\ \hline
+\multicolumn{1}{|l|}{12}         & 69626         \\ \hline
+\end{tabular}
+\caption{tabulka zakázaných směrů}
+\label{table:zakazane_smery_osm2po}
+\end{table}
+
+Vlastní konverzní nástroj vytvoří záznamy se zakázanými směry procesem popsaným v kapitole \ref{subsection:transformace}. Finální data jsou graficky znázorněna na obrázku \ref{turn_restriction_tramod}. Hrany jsou znázorněny oranžovou linií a jejich identifikátor je po pravé straně směru hrany současně s vyznačeným směrem. 
+
+\begin{sidewaysfigure}[htbp]
+\includegraphics[width=0.8\textwidth]{images/turn_restriction_tramod.png}
+\caption{Data po konverzi vlastním nástrojem}
+\label{turn_restriction_tramod}
+\end{sidewaysfigure}
+
+
+
+
+\chapter{Diskuze}
+
+Tato kapitola se zabývá nedostatky jednotlivých datových struktur a postupů, které byly během práce objeveny. Jsou zde uvedeny jednotlivé problémy, jejich následky a navrhované řešení. 
+
+\subsubsection{Export dat OSM2Po}
+
+Nástroj OSM2Po slouží k vytvoření směrovatelné silniční sítě. Tento nástroj po svém spuštění dokáže exportovat data pouze jako SQL Dump soubory obsahující příkazy v jazyce SQL, které se dají použít pro nahrání dat do databáze. Při nahrávání dat ze souboru vlastním nástrojem je tedy nutné využít vlastní parser, který data ze souboru načte. Pokud by nástroj OSM2Po umožňoval export dat do souboru v jiném formátu (XML, JSON), načtení dat by se značně zjednodušilo. 
+
+\subsubsection{API nástroje Traffic Modeller}
+
+Nástroj Traffic Modeller umožňuje práci s uloženými daty přes REST API. API umožňuje získávat data z nástroje Traffic Modeller. Jeho pomocí je také možné nahrávat jednotlivé záznamy do datové struktury. API však neumožňuje vytvořit nový model. Pokud tedy vytvoříme data pro území, které v nástroji Traffic Modeller není uložené v již existujícím modelu, nelze je do nástroje bez vytvoření modelu nahrát. Data tedy musí být uložena do databáze a o migraci dat do nástroje Traffic Modeller se starají administrátoři nástroje.
+
+API nástroje umožňuje rozsáhlou práci s jeho daty. Přidání funkcionality pro vytvoření nového modelu by tak umožnilo nahrání dat přímo do nástroje.
+
+\subsubsection{Hodnota generátorů dopravy}
+
+Jak bylo zmíněno v kapitole \ref{tvorba_generatoru_dopravy} odhad hodnoty generátoru dopravy zavisí na různých demografických faktorech a lokálních parametrech. Tato práce pro odhad využívá pouze plochu jednotlivých budov v $m^2$. Tento odhad by se měl měnit na základě různých typů budov, počtu jejich pater a dále. Algoritmus pro tento výpočet není definován a není tedy implementován. Vypočtená hodnota tedy nekoresponduje s reálným odhadem.
+
+Po dodání algoritmu je možné změnit implementaci výpočtu generátorů na základě atributů budov, což zpřesní odhad generované dopravy. 
+
+\subsubsection{Oblasti generátorů}
+
+Generátory dopravy jsou počítány pro jednotlivé oblasti. Pro účely diplomové práce bylo území rozděleno na čtvercovou mřížku, kde každá dlaždice reprezentuje jednu oblast. Jednotlivé dlaždice tak ohraničují stejně velké oblasti ve městech s velkým počtem budov i mimo města, kde se téměř žádné budovy nevyskytují. Problémy mohou vznikat zvlášť v místech, kde skrz oblast vede například řeka, která oblast rozděluje. Můźe se tedy stát, že nástrojem je vypočítán odhad generátorů na jedné straně řeky a je přiřazen křižovatce na straně druhé.
+
+Nevhodné je také přiřazení generátorů křižovatce nejblíže středu dlaždice. Generátory by měly být přiřazeny křižovatkám s vyšším tokem dopravy, aby lépe reprezentovaly reálnou situaci. Může se tedy stát, že část území uvnitř dlaždice může generovat vysokou hustotu dopravy, ale generátor může být přiřazen nějaké nevýznamné křižovatce mimo toto území. Toto přiřazení také úzce souvisí právě s rozdělením území na oblasti. 
+
+Algoritmus pro vhodnější rozdělení oblasti také není definován. Vhodnějším způsobem rozdělení území na menší oblasti mohou být Voroného diagramy. Po zvolení či definování vhodného algoritmu pro rozdělení oblastí může být algoritmus implementován, což zpřesní odhad generované dopravy.
+
+\subsubsection{Návrh zpětného algoritmu}
+
+Jak bylo popsáno v kapitole \ref{navrh_zpetneho_algoritmu}, nástroj Traffic Modeller nijak neposkytuje informaci o intenzitě dopravy. Data OSM o tuto informaci tedy v současné době nelze obohatit. REST API nástroje umožňuje získat data o jednotlivých hranách. Pokud do těchto dat byla přidána i hodnota intenzity dopravy, umožnilo by to obohacení původních dat OSM. Možnost tuto hodnotu skrz API získat je tedy stěžejní k implementaci navrhovaného algoritmu.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

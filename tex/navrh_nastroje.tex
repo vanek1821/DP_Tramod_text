@@ -1,0 +1,370 @@
+
+\chapter{Návrh nástroje OSM2TraMod}
+\label{navrh_nastroje}
+
+V předchozí kapitole jsou popsány zdrojové a cílové datové struktury. V této kapitole je popsán návrh konverzního nástroje, který dokáže převést zdrojová data ve formátu OSM na cílový formát nástroje Traffic Modeller. Jsou tak postupně popsány kroky harmonizace, tedy třetí třetí krok pětikrokového procesu harmonizace dat. První část kapitoly je věnována přípravě dat s využitím externích nástrojů a druhá část kapitoly poté návrhu vlastního konverzního nástroje, který převede připravená data na datovou strukturu cílového nástroje.
+
+\section{Využití externích modulů}
+
+K naplnění nástroje Traffic Modeller je potřeba z dat OSM získat data o silniční síti a následně data, ze kterých bude možné vypočítat generátory dopravy. Tato data je možné získat pomocí externích nástrojů, které jsou v této části popsány. 
+
+\subsection{Silniční síť}
+
+K využití dat OSM v nástroji Traffic Modeller je důležité prozkoumat způsob, jakým jsou v OSM reprezentována data týkající se silniční sítě. Data v OSM jsou reprezentována následujícím způsobem. Každá pozemní komunikace je reprezentována jednou nebo více cestami (mohou být součástí většího spoje). Pokud se dvě komunikace fyzicky kříží tak, že je možné dostat se z jedné komunikace na druhou, existuje v místě jejich překřížení uzel. Pokud se však cesty fyzicky nekříží, například z důvodu existence mostu, který je druhou cestou podjížděn, v bodě překřížení těchto hran uzel neexistuje. Pokud má pozemní komunikace více pruhů, které nejsou odděleny žádnou fyzickou bariérou, je v datech zanesena jako jedna cesta. Pokud mezi sebou jednotlivé pruhy mají fyzickou bariéru (dálnice), jsou v OSM zaneseny jako dvě jednotlivé cesty.
+
+Dále je ke správnému fungování důležité určit, jakým směrem cesty vedou. Cesty jsou reprezentovány sledem dvěma a více bodů. Pokud existuje komunikace mezi uzly \textit{A} a \textit{B}, bude existovat cesta \textit{\{A,B\}} nebo cesta \textit{\{B,A\}}, ale nikoliv obě. Takovou cestu můžeme v grafu poté chápat jako neorientovanou hranu mezi dvěma uzly. Pokud je však komunikace jednosměrná, cesta bude označena značkou \textit{oneway=yes}. Takové označení využívají veškeré jednosměrné komunikace, včetně obousměrných komunikací oddělených fyzickou bariérou. Pokud cesta obsahuje tuto značku, její směr je poté dán pořadím uzlů, které cestu tvoří. 
+
+Základní vlastností pro využití dat o pozemních komunikacích nástrojem Traffic Modeller je jejich směrovatelnost (z angl. \textit{routability}). Směrovatelnost tak znamená, že je možné se z libovolného uzlu dostat pomocí cest do jiného libovolného uzlu. Data OSM však tento předpoklad nesplňují. Nedostatek je znázorněn na obrázku \ref{obr:nesmerovatelna_sit}.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.55\textwidth]{images/OSM2Tramod_diagrams/OSM_Unroutable.pdf}
+\caption{Nesměrovatelná síť}
+\label{obr:nesmerovatelna_sit}
+\end{figure}
+
+Na obrázku \ref{obr:nesmerovatelna_sit} je vidět 7 bodů: \textit{\{1, 2, 3, 4, 5, 6, 7\}}. Tyto body reprezentují body na silnici. V datech jsou také zaneseny dvě cesty. Cesta \textit{1: \{1, 2, 3, 4\}} a cesta \textit{2: \{5, 3, 6, 7\}}. Takováto data tedy mohou reprezentovat jednoduchou křižovatku. Díky první cestě například víme, jakým způsobem se dostat z bodu \textit{\{1\}} do bodů \textit{\{2, 3\}} nebo \textit{\{4\}}. Problém vzniká ve chvíli, kdy bychom se chtěli z bodu \textit{\{1\}} dostat například do bodu \textit{\{7\}}. Je zřejmé, že do bodu \textit{\{7\}} je možńe se dostat přes bod \textit{\{3\}} a cesta by tedy byla složená z bodů \textit{\{1, 2, 3, 6, 7\}}. Bohužel však v datech Open Street Map taková cesta být nemusí a v datech tedy neexistuje způsob, jakým se z bodu \textit{\{1\}} dostat do bodu \textit{\{7\}}. Taková síť je tedy nesměrovatelná.
+
+Základním předpokladem nístroje Traffic Modeller je však směrovatelná síť. Tedy síť, ve které bude možné najít cestu z libovolného zdrojového bodu, do libovolného cílového bodu. Prvním problémem je tedy převod nesměrovatelné silniční síťě nástroje OSM na směrovatelnou silniční síť.  
+
+\subsubsection{Směrovatelná silniční síť - OSM2Po}
+
+Problém směrovatelnosti silniční sítě je možné řešit dvěma způsoby. Prvním způsobem je najít volně dostupný nástroj, který směrovatelnou síť z dat OSM vytvoří a s jeho výstupem následně pracovat. Druhým a mnohem pracnějším způsobem je pak vytvořit směrovatelnou síť manuálně. 
+
+Nástrojem, který z nesměrovatelné silniční sítě dat OSM dokáže vytvořit směrovatelnou síť je nástroj \textit{OSM2Po}. Vytvořil jej německý vývojář Carsten Möller a je volně dostupným nástrojem. Tento nástroj je současně konvertorem a směrovacím enginem. Dokáže parsovat data z OSM a vytvořit z nich směrovatelnou síť. Proces vytvoření směrovatelné sítě z předchozího příkladu je vidět na obrázku \ref{obr:osm2po_proces}: 
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{images/OSM2Tramod_diagrams/OSM2Po_Process.pdf}
+\caption{OSM2Po proces}
+\label{obr:osm2po_proces}
+\end{figure}
+\vspace{10pt}
+
+\textit{OSM2Po} nejdříve nalezne uzly, kde se komunikace fyzicky kříží (rozdělují, slučují, končí). Tyto uzly zaznamená a poté vytvoří cesty hrany mezi všemi sousedními uzly. Původní počet uzlů dat OSM byl tedy redukován ze 7 na 5. Vrcholy, které jsou vynechány v OSM slouží pouze k určení tvaru cesty. Nástroj OSM2po tento tvar ukládá do vlastního záznamu s geometrií cesty mezi body. Vznikly tedy 4 cesty a je nyní jasné, že se s využitím jedné cesty nebo jejich kombinací je možné dostat z libovolného bodu do libovolného jiného bodu. Například chceme-li se jako v předchozím případě dostat z bodu \textit{\{1\}} do bodu \textit{\{7\}} ( nyní bodu \textit{\{5\}} ), využijeme kombinaci cest \textit{\{1, 3\}\{3, 5\}}. Takováto síť je tedy směrovatelná a je možné ji použít pro nástroj Traffic Modeller. 
+
+Nástroj po svém spuštění vytvoří jednoduchý web server, ze kterého ,po přidání parametrů typu \textit{GET} do URL, dokáže obsloužit nejběžnější případy použití směrovatelných enginů. Dokáže nalézt nejbližší uzel jinému uzlu, nejkratší cestu mezi dvěma uzly či dokáže řešit problém obchodního cestujícího po zadání požadovaných uzlů. Nástroj take umožňuje exportovat data se silniční sítí do dvou SQL souborů, pomocí kterých je možné nahrát data do \textit{PostGIS} databáze. Těmito soubory jsou:
+
+\begin{itemize}
+  \item uzly - v souboru \textit{<název\_území>\_2po\_vertex.sql} 
+  \item hrany - v souboru \textit{<název\_území>\_2po\_4pgr.sql} 
+\end{itemize} 
+
+Každý z těchto souborů tvoří příslušnou tabulku v databázi.
+
+Vrcholy:
+\begin{itemize}
+  \item \textit{id} - identifikátor uzlu
+  \item \textit{clazz} - typ uzlu
+  \item \textit{osm\_id} - původní id elementu z osm
+  \item \textit{osm\_name} - původní název elementu v osm
+  \item \textit{ref\_count} - počet referencí tohoto uzlu
+  \item \textit{restrictions} - textová reprezentace zákazů odbočení přes tento uzel
+  \item \textit{Geometry} - Point geometrie elementu v souřadnicovém systému WGS84
+\end{itemize}
+\vspace{10pt}
+
+Záznamy v tabulce uzlů reprezentují veškerá místa, kde se vozovka fyzicky kříží či končí. Reprezentují tedy veškeré křižovatky, místa kde se vozovky rozdělují, slučují, sjezdy z dálnic, konce slepých ulic a další. Neukládá však jiné uzly. Narozdíl od OSM není tvar cest reprezentován uzly, ale každá hrana (vozovka spojující dva křižovatky) obsahuje vlastní záznam s geometrií, ve které je tento tvar uložen. Dále nejsou exportovány uzly netýkající se silnic. Ve výstupním souboru se tedy vyskytuje méně záznamů uzlů, než ve zdrojovém souboru ve formátu OSM. 
+
+Důležitou vlastností, kterou je možné najít v každém záznamu o uzlu, je záznam o tzv. \textit{Restrictions}, nebo-li zákazech. Tento záznam popisuje zákazy či příkazy odbočení, které se na této křižovatce vyskytují. Díky tomuto záznamu bude možné jednoduše naplnit tabulku \textit{Turn\_Restrictions} v cílovém nástroji Traffic Modeller.
+
+Hrany:
+\begin{itemize}
+  \item \textit{id} - identifikátor hrany
+  \item \textit{osm\_id} - původní id elementu v OSM
+  \item \textit{osm\_name} - původní název elementu v OSM
+  \item \textit{osm\_meta} - původní meta informace z OSM
+  \item \textit{osm\_source\_id} - původní id počátečního uzlu v OSM
+  \item \textit{osm\_target\_id} - původní id koncového uzlu v OSM
+  \item \textit{clazz} - číselný kód typu vozovky
+  \item \textit{flags} - typ dopravy
+  \item \textit{source} - id zdrojového uzlu
+  \item \textit{target} - id koncového uzlu
+  \item \textit{km} - délka úseku v km
+  \item \textit{kmh} - maximální povolená rychlost v km/h
+  \item \textit{cost} - cena za přejetí tohoto úseku (km/kmh)
+  \item \textit{reverse\_cost} - cena za přejetí úseku v opačném směru
+  \item \textit{x1} - x souřadnice počátečního uzlu v souřadnicovém systému WGS84
+  \item \textit{y1} - y souřadnice počátečního uzlu v souřadnicovém systému WGS84
+  \item \textit{x2} - x souřadnice koncového uzlu v souřadnicovém systému WGS84
+  \item \textit{y2} - y souŕadnice koncového uzlu v souřadnicovém systému WGS84
+  \item \textit{Geometry} - LineString geometrie v souřadnicovém systému WGS84
+\end{itemize}
+\vspace{10pt}
+
+Záznamy v tabulce hran reprezentují veškeré úseky na vozovce od jednoho uzlu k druhému. Každý záznam o úseku z vozovky je definován svým identifikátorem, zdrojovým bodem a cílovým bodem. V seznamu jsou uvedeny další informace, které v sobě záznam uchovává. Důležitou informací je směr daného úseku. Pokud je vozovka jednosměrná, vede od zdrojového k cílovému uzlu, hodnota \textit{cost} určuje čas potřebný k přejetí daného úseku a hodnota \textit{reverse\_cost} je nastavena na \textit{1000000.0}. Pokud je vozovka obousměrná, má nastavené obě hodnoty \textit{cost} i \textit{reverse\_cost}, kde hodnota \textit{cost} značí potřebný čas k přejetí úseku od zdrojového k cílovému bodu a hodnota \textit{reverse\_cost} značí čas potřebný k přejetí vozovky od cílového bodu ke zdrojovému. Tvar křivky reprezentující vozovku není narozdíl od OSM reprezentován několika body, avšak samostatnou hodnotou geometrie. 
+
+Při použití \textit{OSM2Po} je tedy splněn předpoklad, že z jakéhokoliv vrcholu je možné se dostat pomocí cest, či jejich kombinace do libovolného jiného vrcholu v síti. Je tedy vyřešen problém směrovatelnosti sítě a není potřeba vymýšlet a implementovat vlastní proces, který by z dat nástroje OSM vytvořil směrovatelnou síť. 
+
+\subsubsection{Srovnání datových struktur}
+
+Při pohledu na datovou strukturu nástroje Traffic Modeller a výstupní datovou strukturu nástroje OSM2Po je vidět jasná podobnost. V následujících tabulkách jsou uvedeny jednotlivé sloupce z tabulek nástroje Traffic Modeller a jejich ekvivalent na straně výstupu nástroje OSM2Po.
+
+\begin{table}[]
+\centering
+\begin{tabular}{|lll|}
+\hline
+\multicolumn{3}{|c|}{\textbf{Hrany}}                                                                            \\ \hline
+\multicolumn{1}{|l|}{\textbf{TraMod}} & \multicolumn{1}{l|}{\textbf{OSM2Po ekvivalent}}  & \textbf{Pozn.}  \\ \hline
+\multicolumn{1}{|l|}{edge\_id}              & \multicolumn{1}{l|}{edges.id}                    & ...            \\ \hline
+\multicolumn{1}{|l|}{source}                & \multicolumn{1}{l|}{edges.source}                & ...            \\ \hline
+\multicolumn{1}{|l|}{target}                & \multicolumn{1}{l|}{edges.target}                & ...            \\ \hline
+\multicolumn{1}{|l|}{capacity}              & \multicolumn{1}{l|}{...}                         & ...            \\ \hline
+\multicolumn{1}{|l|}{cost}                  & \multicolumn{1}{l|}{edges.cost / reverse\_cost}  & ...            \\ \hline
+\multicolumn{1}{|l|}{isvalid}               & \multicolumn{1}{l|}{...}                         & default = true \\ \hline
+\multicolumn{1}{|l|}{turn\_restriction}     & \multicolumn{1}{l|}{vertexes.turn\_restrictions} &                \\ \hline
+\multicolumn{1}{|l|}{speed}                 & \multicolumn{1}{l|}{edges.kmh}                   & ...            \\ \hline
+\multicolumn{1}{|l|}{road\_type}            & \multicolumn{1}{l|}{edges.clazz}                 & ...            \\ \hline
+\multicolumn{1}{|l|}{geometry}              & \multicolumn{1}{l|}{edges.geometry}              & ...            \\ \hline
+\end{tabular}
+\caption{Srovnání tabulek hran}
+\end{table}
+\vspace{20pt}
+\begin{table}[]
+\centering
+\begin{tabular}{|lll|}
+\hline
+\multicolumn{3}{|c|}{\textbf{Vrcholy}}                                                                   \\ \hline
+\multicolumn{1}{|l|}{\textbf{TraMod}} & \multicolumn{1}{l|}{\textbf{OSM2Po ekvivalent}} & \textbf{Pozn.} \\ \hline
+\multicolumn{1}{|l|}{node\_id}        & \multicolumn{1}{l|}{vertexes.id}                & ...            \\ \hline
+\multicolumn{1}{|l|}{geometry}        & \multicolumn{1}{l|}{geometry}                   & ...            \\ \hline
+\end{tabular}
+\caption{Srovnání tabulek vrcholů}
+\end{table}
+\vspace{10pt}
+
+
+
+Tabulky těchto nástrojů si téměř odpovídají, avšak ke správné kompatibilitě dat je potřeba tato data ještě dále transformovat. Konkrétní rozdíly a jednotlivé transformace jsou popsány v části \ref{subsection:transformace}. I přes tyto rozdíly se však dá výstupní struktura nástroje OSM2Po považovat za vhodně připravená data pro nástroj Traffic Modeller a tato výstupní data tedy budou použit jako zdroj implementovaného konverzního nástroje.
+
+\subsection{Generátory dopravy}
+\label{generatory_dopravy}
+
+Generátory dopravy jsou, stejně jako silniční síť, další nezbytnou součástí nástroje Traffic Modeller. Generátory dopravy rozumíme elementy reprezentující přírůstek dopravy v síti. Hodnota tohoto elementu určuje přírůstek dopravy vznikající v místě tohoto elementu. Jelikož nemají generátory žádnou explicitní prostorovou složku, jsou přiřazeny nějakému uzlu (křižovatce) uvnitř oblasti, ze které jsou vypočítány. Hodnota generátoru, tedy hustota generovaného provozu, je počítána na základě různých demografických zdrojů a měla by odrážet lokální parametry, jako je například počet obyvatel, počet škol a další.
+
+Pro účely diplomové práce bylo rozhodnuto, že těmito lokálními parametry bude zastavěná plocha budov v oblasti generátoru. Generátor se tedy bude počítat jako obsah polygonů, které budovy tvoří. Takto vypočítaná hodnota samozřejmě nemůže odrážet reálnou hustotu dopravy, vznikající v místě generátoru. Výpočet se totiž bude lišit pro jiné typy budov, počet jejich pater a dále. Například je jasné, že v místě obytného domu se sedmi patry bude vznikat větší hustota dopravy, než například v místě s pěti rodinnými domy. 
+
+\subsubsection{Filtrace}
+
+Data nástroje OSM reprezentují budovy jako cesty. Tyto cesty využívají atribut elementu \textit{<tag k="building" v="yes"/>}. Ze zdrojového souboru je tedy potřeba získat pouze cesty s tímto atributem a příslušné uzly. Tímto způsobem je možné zásadně redukovat množství dat, které budou použity pro výpočet. Tato redukce bude mít za následek zrychlení běhu výpočetního algoritmu a snížení jeho spotřebované paměti. 
+
+K filtraci je možné využít nástroj \textit{osmfilter} dostupný na wiki nástroje OSM na odkazu \url{wiki.openstreetmap.org/wiki/Osmfilter}. Nástroj \textit{omsfilter} dokáže na základě zadaných parametrů filtrovat nejrůznější data OSM. Tyto parametry jsou k nalezení na uvedeném odkazu. Při spuštění je mu pomocí vstupního parametru předán soubor ve formátu \textit{osm}, následně seznam parametrů pro filtraci a název výstupního souboru. Nástroj načte vstupní soubor a na základě zadaných parametrů vyfiltruje data a následně vygeneruje zadaný výstupní soubor ve formátu \textit{osm}.
+
+\subsubsection{Konverze}
+
+Soubory s daty OSM mohou být získány ve dvou formátech. Jedním z formátů je formát \textit{osm}. Tento formát obsahuje textovou reprezentaci dat v XML struktuře. Druhým formátem je formát \textit{pbf}. Ten je pouze komprimovaným formátem původního formátu osm. Není tedy lidsky čitelný. Některé nástroje umí pracovat s oběma formáty, zatímco některé (např \textit{osmfilter}) umí pracovat pouze s jedním z nich. Je tedy vhodné mít možnost převodu mezi těmito formáty. K převodu formátů je možné použít volně dostupný nástroj \textit{osmium}. Nástroj je dostupný přes portál GitHub na adrese \url{github.com/osmcode/osmium-tool}. Nástroj dokáže libovolně převádět mezi těmito formáty.
+
+\section{Návrh vlastního nástroje}
+
+V této části je popsán návrh vlastního konverzního nástroje. Tento nástroj využije data popsaná v části přípravy dat jako vstup. Výstupem jsou soubory použitelné pro načtení dat do databáze nástroje Traffic Modeller. Je zde popsán celkový proces konverze a jednotlivé algoritmy, které jsou v nástroji implementovány. 
+
+\subsection{Proces konverze}
+
+Celkový proces transformace přímo vychází z části o přípravě dat. Po stažení dat z OSM je možné pomocí zmíněných nástrojů data připravit, což zjednodušší finální transformace implementované ve vlastním nástroji. První částí je připravit data silniční sítě. K tomu je použit nástroj OSM2Po. Výstupem nástroje OSM2Po jsou \textit{SQL dump} soubory reprezentující směrovatelnou silniční síť. \textit{SQL dump} je textový soubor obsahující popis struktury i obsahu tabulek ve formě série SQL příkazů. Z těchto souborů je následně možné načíst data uzlů a hran, které společně tvoří silniční síť.
+
+Druhou částí je poté připravit data pro výpočet generátorů dopravy. Jak bylo zmíněno v kapitole o přípravě dat, výpočet generátorů dopravy využívá data o budovách. Data ze staženého OSM jsou tedy redukována filtrací. K filtraci je využit nástroj \textit{osmfilter}. Tento nástroj dokáže zpracovat data pouze ve formátu \textit{osm}. Pokud jsou tedy zdrojová data stažena ve formátu \textit{pbf}, je potřeba soubor konvertovat nástrojem \textit{osm}.
+
+Takto připravená data budou sloužit jako vstup implementovaného nástroje, jehož výstupem budou \textit{SQL Dump} soubory pro načtení dat do nástroje Traffic Modeller. Celkový proces je znázorněn na obrázku \ref{obr:proces_konverze}.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics{images/OSM2Tramod_diagrams/OSM2TramodProcess.pdf}
+\caption{Proces konverze}
+\label{obr:proces_konverze}
+\end{figure}
+
+Proces tedy zahrnuje následující kroky: 
+
+\begin{itemize}
+  \item stažení zdrojového souboru z portálu OSM ve formátu \textit{osm} nebo \textit{pbf}
+  \item vytvoření směrovatelné sítě pomocí nástroje \textit{OSM2Po}
+  \item případná konverze formátu dat nástrojem \textit{osmium}
+  \item filtrace dat nástrojem \textit{osmfilter}
+  \item proces zbylých transformací nástrojem vytvořeným diplomové práce
+  \item import dat do databáze nástroje Traffic Modeller
+\end{itemize}
+
+\subsection{Docker}
+
+Celkový proces konverze vyžaduje čtyři různé nástroje. Tyto nástroje jsou naprogramované v jazyce Java a jazyce C. K celkovému procesu by uživatel musel všechny tyto nástroje získat, instalovat a poté postupně spouštět. Pro usnadnění uživateli a zaručení kompatibility s operačním systémem byl zvolen software \textit{Docker}. \textit{Docker} je populární nástroj sloužící k vytvoření, nasazení a spouštění kontejnerů. V těchto kontejnerech je uložen software v kompletním souborovém systému, které obsahují vše potřebné k jeho správnému fungování, tedy kód, systémové nástroje, systémové knihovny. Díky tomu bude software vždy běžet stejně bez ohledu na prostředí, ve kterém je nasazen. Nástroj dovoluje aplikacím využívat jádro hostitelského operačního systému a v celém obrazu tedy není celý operační systém. Obsahem obrazu musí být pouze části, které nejsou obsaženy na hostitelském stroji. 
+
+Celá aplikace tedy bude dockerizována. Bude obsahovat potřebné externí nástroje, kompilátory a knihovny, které zaručí jejich spustitelnost. Aplikace tak bude spustitelná na jakémkoliv linuxovém stroji, který bude mít nainstalovaný nástroj Docker. 
+
+\textbf{https://web.archive.org/web/20190913100835/http://maureenogara.sys-con.com/node/2747331}
+\textbf{https://is.muni.cz/th/wu1mq/DP\_Ales\_Mracko.pdf}
+
+
+\subsection{Transformace}
+\label{subsection:transformace}
+
+Připravená data je nyní možné použít pro vlastní transformace, které umožní jejich použití v nástroji Traffic Modeller. V této části jsou jednotlivé transformace popsány. Těmito transformacemi jsou:
+
+\begin{itemize}
+  \item tvorba jednosměrných hran z obousměrných
+  \item tvorba zakázaných směrů
+  \item tvorba generátorů dopravy
+\end{itemize}
+
+\subsubsection{Tvorba jednosměrných hran z obousměrných}
+\label{jednosmerne_obousmerne}
+
+První potřebná transformace vychází z reprezentace hran v nástrojích \textit{OSM2Po} a Traffic Modeller. Nástroje \textit{OSM2Po} reprezentuje hrany jako neorientované. Pokud existuje mezi křižovatkami vozovka, po které je možné jet v obou směrech (obousměrná), v datech se vyskytuje pouze jeden záznam - neorientovaná hrana. OSM2Po reprezentuje směr hrany vždy od zdrojového (\textit{source}) k cílovému (\textit{target}) vrcholu. Obousměrnost této hrany je vyjádřena hodnotami sloupce \textit{cost} a \textit{reverse\_cost}. Hodnota \textit{cost} je vždy nastavena na hodnotu, která vyjadřuje cenu za přejetí této hrany ve směru hrany, tedy od zdrojového ke koncovému vrcholu. Tato hodnota je vypočítána jako podíl délky této hrany v kilometrech a maximální povolené rychlosti v km/h. Hodnotou je tedy čas potřebný pro přejetí tohoto úseku v hodinách. Obousměrnost je vyjádřena hlavně hodnotou sloupce \textit{revese\_cost}. Pokud je silnice jednosměrná, tedy vede jen od zdrojového k cílovému vrcholu, poté je hodnota \textit{reverse\_cost} nastavena na hodnotu \textit{1000000}. Pokud je však hrana obousměrná, tedy je možné hranu přejet i ve směru od cílového ke zdrojovému vrcholu, hodnota sloupce \textit{revese\_cost} je opět vypočtena. Tímto způsobem OSM2Po reprezentuje neorientované hrany.
+
+Nástroj Traffic Modeller napříč tomu neuchovává hranu jako neorientovanou a v případě obousměrné vozovky vyžaduje zvláštní záznam pro hrany v obou směrech - orientované. První transformací je tedy detekce obousměrných hran a pro všechny vytvořit druhou hranu v opačném směru. Tento jednoduchý proces je možné vidět na obrázku 5.2.. Hrana má totožné hodnoty jako původní hrana. Změnou je pouze výměna zdrojového a cílového vrcholů, pro hodnotu \textit{cost} využita hodnota \textit{reverse\_cost} a otočena geometrie pomocí vložení řetězce \textit{ST\_Reverse}, což je funkce PostGIS databáze, která při nahrání geometrii otočí na opačný směr. 
+
+\begin{figure}[htbp]
+\centering
+\includegraphics{images/OSM2Tramod_diagrams/DuplexEdges.pdf}
+\caption{Tvorba obousměrných hran}
+\end{figure}
+\vspace{10pt}
+
+\subsubsection{Tvorba zakázaných směrů}
+\label{tvorba_zakazanych_smeru}
+
+Druhou transformací, která je potřeba aplikovat na připravená data se týká zakázaných směrů. Zakázané směry jsou v datech nástroje OSM2Po uvedeny v tabulce vrcholů ve sloupci \textit{restrictions}. Každý vrchol obsahuje textový záznam o zakázaném směru, které přísluší tomuto vrcholu. Tento textový záznam využívá jednoduchý formát. Zakázaný směr začíná znakem "\textit{-}", následuje id zdrojové hrany, poté znak "\textit{\_}" a následuje id cílové hrany. Zákaz odbočení je tedy zanesen následovně: 
+\begin{itemize}
+ \item \textit{-\textless id\_zdrojové\_hrany\textgreater\_\textless id\_cílové\_hrany\textgreater}
+\end{itemize}
+Pokud ve vrcholu existuje více zakázaných směrů, jsou bez jakýchkoliv dalších znaků zřetězené za sebou. 
+
+V nástroji Traffic Modeller jsou zakázané směry uloženy v samostatné tabulce. Z každého zakázaného směru, který je uložen v textové podobě ve vrcholu je tedy potřeba vytvořit samostatný záznam do tabulky \textit{turn\_restrictions}. Při této transformaci je důležité nezapomenout na předchozí transformaci neorientovaných hran. Pokud byla hrana rozdělena na dvě orientované, je potřeba k tomu přihlédnout i při vytváření záznamů v tabulce \textit{turn\_restrictions} a zajistit správné přiřazení identifikátorů hran. 
+
+Algoritmus tohoto procesu je vidět na obrázku 4.5. Hodnoty identifikátorů hran odpovídají obrázku 5.2.. Nejdříve je vybrána zdrojová hrana zákazu odbočení. Pokud hrana byla jednosměrná a nebyla tedy vytvořena druhá hrana v opačném směru, zdrojová hrana zákazu odbočení zůstane stejná. Pokud byla hrana obousměrná, je vybrána nová hrana a zkontrolován její cílový vrchol. Pokud nejsou stejné, zamená to, že nová hrana vede z vrcholu ven a je použit indentifikátor původní hrany. Pokud stejné jsou, znamená to, že hraně vedoucí do tohoto vrcholu odpovídá nově vytvořená hrana a je tedy použit její identifikátor. Stejným způsobem je poté vybrána cílová hrana zákazu odbočení a je zkontrolováno, zda nebyla rozdělena na dvě a pokud ano, je jediným rozdílem oproti algoritmu pro zdrojovou hranu neporovnávání s cílovým vrcholem nově vytvořené hrany, ale se zdrojovým vrcholem nově vytvořené hrany. S přihlédnutím k hodnotám na obrázku 5.2. je tedy vidět, že zákaz odbočení \textit{-3\_2} byl modifikován na zákaz odbočení \textit{-7\_2}.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{images/OSM2Tramod_diagrams/DuplexTurnRestrictionsAlgorhitm.pdf}
+\caption{Transformace zákazů odbočení pro obousměrné hrany}
+\end{figure}
+\vspace{10pt}
+
+V OSM2Po se však vyskytují také případy, kde jsou místo zakázaných směrů použity přikázané směry. Jsou také vypsané v hodnotě \textit{restrictions} u každého vrcholu. Jediným rozdílem v zápisu je využití znaménka \textit{+} namísto původně použitého \textit{-}. Jelikož cílová struktura nástroje Traffic Modeller neobsahuje žádný zvláštní způsob pro uložení přikázaných směrů, musí být příkázané směry transformovány na na zakázané všech do hran, které v příkazu uvedené nejsou. Duležité je také opět zachovat správné identifikátory hran v případech, že byly hrany obousměrné a byly tedy rozděleny. Příklad transformace příkazu odbočení na zákazy odbočení je možné vidět na obrázku 4.6.. 
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=1.005\textwidth]{images/OSM2Tramod_diagrams/TurnOrderTransformation.pdf}
+\caption{Transformace přikázaných směrů}
+\end{figure}
+\vspace{10pt}
+
+Tímto způsobem je možné transformovat přikázané směry na zakázané směry. V datech se vyskytují i kombinace výše zmíněných transformací (např. 2 přikázané směry). Podrobněji popsané řešení těchto situací je popsáno v kapitole implementace nástroje. 
+
+Po aplikaci těchto transformací na výstupní data nástroje OSM2Po odpovídají data modelu silniční sítě v nástroji Traffic Modeller a mohou pro něj být použity.
+
+\subsubsection{Tvorba generátorů dopravy}
+\label{tvorba_generatoru_dopravy}
+
+Jak už bylo řečeno, generátory dopravy jsou nezbytnou součástí nástroje Traffic Modeller umožňující nástroji modelovat hustotu dopravy na vymezeném území. Výpočet generátorů dopravy využívá data o budovách. Jednotlivé generátory je poté potřeba shlukovat do menších oblastí a v poslední řadě musí být generátory přiřazeny nejvhodnějšímu uzlu uvnitř oblasti. 
+
+Abychom zajistili nejlepší odhad hodnoty generátoru dopravy, je potřeba výpočet měnit pro různé typy budov, počet jejich pater a dalších různých parametrů. Tento výpočet se také liší pro různá území. Výpočet pro území města Plzně je předmětem \textbf{bakalářské práce Pavla Blahníka}. Pro naše účely však stačí dokázat, že se generátory dopravy dají z dostupných dat o budovách vypočítat. Hodnotu generátoru dopravy tedy bude reprezentovat plocha budovy a výsledná hodnota tedy bude pouze reprezentativní hodnotou vyjadřující existenci generátoru v dané oblasti. V kapitole popisující datovou strukturu nástroje \textit{OSM} je popis reprezentace nejednobodových prostorových elementů. Tyto elementy jsou popsány sledem několika bodů referencovaných jednou cestou. Záznam o budově je tedy v \textit{OSM} reprezentován jako sled několika bodů, které společně tvoří uzavřený polygon. Tyto body mají uložené své souřadnice. Díky tomu jsme z polygonu a souřadnic jeho bodů schopni vypočítat plochu budovy. Jelikož jsou budovy tvořeny polygony, jejichž strany se nepřekrývají, je možné pro výpočet plochy použít Gaussovu metodu pro výpočet plochy polygonu. Pro výpočet je tedy možné použít vzorec \ref{plocha_polygonu}.
+
+\begin{figure}[htbp]
+  \centering
+  $\displaystyle S = \frac{1}{2}\sum_{i=1}^{n-1}(y_{i}+y_{i+1})(x_{i}-x_{i+1})$
+  \caption{Gaussova metoda pro výpočet plochy polygonu}
+  \label{plocha_polygonu}
+\end{figure}
+
+$S$ označuje plochu polygonu v $m^2$. Proměnná $x$ vyjadřuje zeměpisnou délku a proměnná $y$ vyjadřuje zeměpisnou šířku. Pro výpočet v $m^2$ jsou souřadnice převedeny ze souřadnicového systému WGS-84 do projekce Web Mercator, která je na metrech založena. K převodu je použit vzorec \ref{degrees_to_meters}. Podmínkou pro správné fungování vzorce \ref{plocha_polygonu} je uvedení prvního vrcholu polygonu i jako posledního. Tyto generátory je dále potřeba shlukovat do nějakých menších oblastí. 
+
+\begin{figure}[htbp]
+  \centering
+  $\displaystyle x = \lambda * 20037508.34 / 180$
+  $\displaystyle y = (\log(\tan((90 + \varphi) * \pi / 360)) / (\pi / 180)) * 20037508.34 / 180 $
+  \caption{Projekce WGS-84 na Web Mercator}
+  \label{degrees_to_meters}
+\end{figure}
+
+$\varphi$ souřadnice centroidu $C$ vyjadřující zeměpisnou šířku a $C_\lambda$ je $\lambda$ souřadnice centroidu $C$ vyjadřující zeměpisnou délku.
+
+Vymezení vhodných oblastí opět závisí na několika různých faktorech, jako může být členění městských částí, přítomnost řek a další. Tento výpočet opět není předmětem diplomové práce a pro její účely postačí vyznačené území rozdělit na libovolné oblasti. Pro účely diplomové práce je voleno dělení požadované oblasti na čtvercovou mřížku. Počet čtverců, na které je oblast rozdělena volí uživatel. Délka strany jednoho čtverce je poté vypočítána podle následujícího vzorce \ref{delka_strany_dlazdice}. \textbf{https://gist.github.com/onderaltintas/6649521}
+
+\begin{figure}[htbp]
+  \centering
+  $\displaystyle a = \sqrt{\frac{S}{c}}$
+  \caption{Výpočet délky strany dlaždice}
+  \label{delka_strany_dlazdice}
+\end{figure}
+
+Délka strany $a$ je vypočtena jako druhá odmocnina z podílu plochy $S$ a uživatelem zadaného požadovaného počtu dlaždic $c$. Plocha $S$ je vypočítána také podle vzorce \ref{plocha_polygonu}, ale jejím vstupem jsou souřadnice ve formátu WGS-84, tím pádem se jedná o plochu ve stupních. Vzhledem k libovolnému poměru délky stran celé oblasti, není možné ji rozdělit na čtvercovou mřížku tak, aby byla vyplněna kompletně. Čtverce tedy budou tvořeny od jednoho rohu a poslední oblastí nebude čtverec, ale pouze oblast s délkou strany takovou, aby vyplnila zbylou mezeru. Poslední krajní oblasti jsou tedy pouze malou doplňkovou oblastí, aby byla celá oblast pokryta. Grafické znázornění je vidět na obrázku: 
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{images/OSM2Tramod_diagrams/Grid_creation.pdf}
+\caption{Vytvoření oblastí}
+\end{figure}
+\vspace{10pt}
+
+Délka strany $a$ je na obrázku znázorněna pomocí proměnných $dLon$ a $dLat$. Algoritmus postupně tvoří dlaždice a porovnává hodnoty nejvyšší hodnoty zeměpisné šířky a délky dlaždice s hodnotami zeměpisné šířky a délky celé vymezené oblasti. Pokud je nejvyšší hodnota šířky nebo délky vyšší než nejvyšší hodnota šířky nebo délky celé oblasti, je pro dlaždici použita hodnota celé oblasti. Tímto způsobem je vytvořena mřížka pokrývající celou oblast.  
+
+V každé oblasti (dlaždici) jsou sečteny příslušné hodnoty generátorů. K příslušnosti budovy do jednotlivé oblasti je využit jejich centroid, aby se zabránilo situacím, kde budova svou plochou zasahuje do více než jedné oblasti. Centroid budov je vypočten vzorcem na obrázku 5.6.
+
+\begin{figure}[htbp]
+  \centering
+  $\displaystyle C_{\lambda} = \frac{1}{6S}\sum_{i=0}^{n-1}(\lambda_{i}+\lambda_{i+1})(\varphi_{i}\lambda_{i+1}-\varphi_{i+1}\lambda_{i})$
+  $\displaystyle C_{\varphi} = \frac{1}{6S}\sum_{i=0}^{n-1}(\varphi_{i}+\varphi_{i+1})(\varphi_{i}\lambda_{i+1}-\varphi_{i+1}\lambda_{i})$
+  \caption{Výpočet centroidů polygonu}
+  \label{centroid_polygonu}
+\end{figure}
+
+$C_\varphi$ je $\varphi$ souřadnice centroidu $C$ vyjadřující zeměpisnou šířku a $C_\lambda$ je $\lambda$ souřadnice centroidu $C$ vyjadřující zeměpisnou délku. $N-1$ je počet vrcholů (první musí být uveden i jako poslední). $\varphi$ a $\lambda$ jsou souřadnice jednotlivých bodů polygonu. 
+\textbf{BOURKE \- http://paulbourke.net/geometry/polygonmesh/}
+
+Generátor dopravy je v poslední řadě potřeba přiřadit nějaké vhodné křižovatce v dopravní síti. Výběr vhodné křižovatky, ke které je generátor přiřazen, je opět důležitým faktorem správné simulace dopravní situace. Tento výběr také není součástí diplomové práce a pro její účely bude generátor přiřazen křižovatce, která je nejblíže středu dlaždice. K výpočtu vzdálenosti mezi dvěma body (centroidu dlaždice a křižovatky) je možné využít Haversinův vzorec uvedený na obrázku 5.7.
+
+
+\begin{figure}[htbp]
+  \centering
+  $\displaystyle a = \sin ^{2}(\Delta \varphi /2)+\cos \varphi_{1} \cdot \cos \varphi_{2} \cdot \sin^{2}(\Delta\lambda/2)$
+
+  
+  $\displaystyle c = 2\cdot  atan2 (\sqrt{a}, \sqrt{(1-a)})$
+
+
+  $\displaystyle d = R\cdot c$
+  \caption{Výpočet vzdálenosti dvou bodů}
+\end{figure}
+
+$\varphi$ je zeměpisná šířka, $\lambda$ je zeměpisná délka, $R$ je průměr Země (6371m). \textbf{HAVERSINE - https://www.movable-type.co.uk/scripts/latlong.html}
+
+Generátory jsou tedy přiřazeny křižovatce ležící nejblíže středu dlaždice. Pokud však dlaždice obsahuje generátor a neobsahuje žádnou křižovatku, je hodnota generátoru připočtena sousedící dlaždici s nejvyšší hodnotou generátoru obsahující křižovatku. Pokud žádná sousední dlaždice neobsahuje křižovatku, znamená to, že uživatel zvolil příliš jemné dělení prostoru a je tedy třeba zvolit méně jemné dělení. 
+
+Tímto způsobem jsou vypočteny a přiřazeny generátory dopravy.
+
+\section{Návrh zpětného algoritmu}
+\label{navrh_zpetneho_algoritmu}
+
+Nástroj Traffic Modeller během simulace vypočítá hodnoty intenzity dopravy pro jednotlivé hrany. Intenzita dopravy značí počet vozidel, které přes danou hranu projedou ve špičkové hodině (typicky 4.-5. hodina odpoledne). O tyto hodnoty je možné rozšířit původní data OSM. Tato data však nejsou v současné době nástrojem Traffic Modeller nijak uložena ani poskytována a implementace zpětného rozšíření dat OSM tedy není možná. Následující popis je návrh, který bude možné implementovat, pokud nástroj Traffic Modeller umožní tato data získat přes své API.
+
+Přidání dat hranám v původních datech je možné dvěma způsoby.
+
+\begin{enumerate}
+  \item Přidat značku s hodnotou intenzity dopravy příslušné cestě
+  \item Vytvořit novou relaci referencovanou na vrcholy v původních datech
+  \end{enumerate}
+
+Pro využití prvního zmíněného způsobu je nutné, aby jednotlivé hrany v nástroji TraMod odpovídaly cestám v datech OSM. Z této kapitoly však jasně vyplývá, že záznamy hran v nástroji TraMod původní cesty v datech OSM nereferencují. Tento přístup tedy není možné použít. 
+
+Pro využití druhého způsobu je potřeba, aby jednotlivé hrany v nástroji TraMod referencovali vrcholy v původních datech OSM. Z popisu datové struktury nástroje však víme, že ani jednotlivé body nejsou hranami referencovány. Z kapitoly \ref{datova_struktura_osm} však víme, že jednotlivé vrcholy v datech OSM jsou současně ke křižovatkám použity k určení tvaru jednotlivých cest. Tento tvar je v datové struktuře nástroje TraMod reprezentován hodnotami geometrie. Geometrie jednotlivých hran obsahuje seznam souřadnic bodů, které je tvoří. Získání identifikátorů jednotlivých vrcholů z dat OSM je tedy možné získat postupným prohledáváním jejich souřadnic. 
+
+Nástroj vykonávající zpětný algoritmus tedy musí načíst vrcholy z původních dat OSM současně s hranami nástroje TraMod. Pro každou hranu v nástroji TraMod načte seznam jednotlivých souřadnic, které definují její tvar. Pro každou souřadnici je poté potřeba prohledat seznam načtených vrcholů z dat OSM a podle souřadnic nalézt odpovídající vrchol. Po nalezení všech vrcholů je poté pro každou hranu vytvořena nová relace v datech OSM, která referencuje nalezené body ve stejném pořadí, jako jsou uvedeny v geometrii hrany. Do této relace je uložena značka vyjadřující intenzitu dopravy z nástroje TraMod. 
+
+Jednotlivé relace poté můžou být připsány do souboru s daty OSM, čímž původní dataset obohatí o hodnoty intenzity dopravy na jednotlivých úsecích silniční sítě. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

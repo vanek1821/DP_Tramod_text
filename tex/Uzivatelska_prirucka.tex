@@ -1,0 +1,95 @@
+\chapter{Uživatelská příručka}
+
+V této kapitole jsou popsány informace pro uživatele nástroje. Je zde příklad stažení požadovaných dat, návod na spuštění aplikace včetně popisu vstupních parametrů a také způsob importu dat do databáze nástroje TraMod. 
+
+\section{Stažení dat}
+
+Data je možné získat z více zdrojů různých zdrojů. Popsány zde budou dva příklady a to stažení dat přímo z portálu \url{openstreetmap.org} a poté stažení dat z portálu \url{https://extract.bbbike.org}.
+
+\subsubsection{OpenStreetMap}
+
+Po otevření portálu \url{openstreetmap.org} v levém horním rohu otevřeme klikem na tlačítko "Export" záložku pro export dat. Po stisku tlačítka export v levé části obrazovky je stažen soubor ve formátu \textit{.osm}. Kliknutím na tlačítko "Ručne vybrat jinou oblast" může uživatel nastavit hranice pro výběr jiné oblasti. Pokud je vybrána oblast s více jak 50 000 body, otevře se stránka s chybovou hláškou "\textit{You requested too many nodes (limit is 50000). Either request a smaller area, or use planet.osm}"
+
+\textbf{TODO: obrázky}
+
+\subsubsection{BBBike}
+
+BBBike je portál umožňující stahovat větší oblasti, než je možné stáhnout z portálu \url{openstreetmap.org}. Navíc také umožňuje vybrat oblast polygonem, narozdíl od osm, kde lze vybrat oblast pouze tvaru obdelníku. Při stažení z portálu \url{bbbike.org} je nejprve nutné nastavit formát, ve kterém oblast bude stažena. K tomu je určeno menu v levém horním rohu. Ke správnému fungování je potřeba vybrat první formát "\textit{Protocolbuffer (PBF)}". Poté je potřeba oblast pojmenovat. Jméno se vpíše do formuláře pod výběrem formátu. Na jméně oblasti nezáleží a uživatel si jej může zvolit libovolně. V další kolonce poté uživatel musí zadat e-mailovou adresu, na kterou přijde odkaz a pokyny ke stažení souboru.
+
+\textbf{TODO: obrázky}
+
+\section{Spuštění OSM2TraMod}
+
+Ke spuštění musí mít uživatel nainstalovaný Docker. Stažení nástroje s pokyny k instalaci jsou dostupné na odkazu \url{docker.com/get-started/}. 
+
+Samotné spuštění probíhá pomocí shellscriptu \textit{osm2tramod.sh}. Script se spouští z příkazové řádky. Uživatel musí zadat 5 parametrů. Těmi jsou: 
+
+\begin{itemize}
+	\item \textit{AREA\_NAME} - název oblasti
+	\item \textit{FORMAT} - formát vstupního souboru pbf/osm 
+	\item \textit{IN\_FILE} - název vstupního souboru
+	\item \textit{TILE\_COUNT} - požadovaný počet dlaždic na rozdělení oblasti
+	\item \textit{OUT\_DIR} - název výstupní složky
+\end{itemize}
+
+Spuštění tedy vypadá následovně: 
+
+\begin{lstlisting}
+./osm2tramod.sh \
+	<AREA_NAME > \
+	<FORMAT > \
+	<IN_FILE > \
+	<TILE_COUNT > \
+	<OUT_DIR >
+\end{lstlisting}
+
+Příklad konkrétního spuštění může vypadat takto: 
+\begin{lstlisting}
+./osm2tramod.sh \
+ 	Pilsen_vanek \
+ 	pbf \
+ 	IN_FILE/pilsen.osm.pbf \
+ 	1000 \
+ 	pilsen_output
+\end{lstlisting}
+
+Po skončení konverze je možné na cestě ve složce definované uživatelem možné nalézt pět sql souborů, které je možné použít pro import dat do nástroje TraMod. Tyto soubory jsou na uložené na cestě \newline \textit{<OUTPUT\_FOLDER>/<AREA\_NAME>/Tramod\_data}. Jejich názvy jsou: 
+
+\begin{itemize}
+
+	\item \textit{<AREA\_NAME>\_Tramod\_Scheme.sql} - soubor pro vytvoření struktury databáze
+	\item \textit{<AREA\_NAME>\_Tramod\_Edges.sql} - soubor s daty hran
+	\item \textit{<AREA\_NAME>\_Tramod\_Vertexes.sql} - soubor s daty uzlů
+	\item \textit{<AREA\_NAME>\_Tramod\_Turn\_Restrictions.sql} - soubor s daty zakázaných směrů
+	\item \textit{<AREA\_NAME>\_Tramod\_Zones.sql} - soubor s generátory dopravy
+\end{itemize}
+
+\section{Import dat do nástroje TraMod}
+
+K importu dat do nástroje TraMod uživatel využívá libovolného SW pro práci s databázemi, který umožňuje práci s databází pomocí SQL souborů. Může být použit software ArcGIS, nebo například software DBeaver. K samotnému nahrání postačí i konzolový klient databáze PostgreSQL. Tento klient je volně dostupný na adrese \url{https://www.postgresql.org/download/}
+
+Import do databáze pomocí konzolového klienta poté probíhá pomocí jednoduchého příkazu:
+
+\begin{lstlisting}
+psql -h hostname -p port -d databasename -U username \
+ -f SQL_script_file_name}
+\end{lstlisting}
+
+Jednotlivé soubory musí být nahrávány ve stejném pořadí, jaké je uvedeno v následujícím seznamu: 
+
+\begin{enumerate}
+	\item \textit{Scheme.sql} - soubor pro vytvoření struktury databáze
+	\item \textit{Edges.sql} - soubor s daty hran
+	\item \textit{Vertexes.sql} - soubor s daty uzlů
+	\item \textit{Turn\_Restrictions.sql} - soubor s daty zakázaných směrů
+	\item \textit{Zones.sql} - soubor s generátory dopravy
+\end{enumerate}
+
+Při pokusu o import v jiném pořadí může nastat situace, kdy nahrávané záznamy obsahují referenci na záznamy, které nejsou v databázi nahrány. 
+
+
+
+
+
+
+

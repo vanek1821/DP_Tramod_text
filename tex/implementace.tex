@@ -1,0 +1,153 @@
+\chapter{Implementace}
+
+V této kapitole jsou popsány důležité dílčí části implementace nástroje. Vstupem vlastního nástroje jsou výstupní soubory nástroje OSM2Po, které jsou využity k transformaci silniční sítě a výstupní soubor nástroje \textit{osmfilter}, který obsahuje data týkající se budov. Výstupem jsou poté \textit{SQL Dump} soubory, pomocí kterých lze načíst data do databáze nástroje Traffic Modeller. Celkový zjednodušený proces je vidět na obrázku 5.1.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{images/OSM2Tramod_diagrams/OSM2TramodImplementationProcess.pdf}
+\caption{Proces transformace vlastním nástrojem}
+\end{figure}
+\vspace{10pt}
+
+Nástroj nejdříve načte a zpracuje vstupní sql soubory týkající se silniční sítě, následně soubor \textit{osm} s informacemi o budovách. Z těchto souborů naplní vlastní struktury uvnitř třídy \textit{DataContainer}. Poté jsou spuštěny transformační procesy pomocí třídy \textit{Modifier}, která převezme obsah třídy \textit{DataContainer} a postupně zpracuje její záznamy. Výsledky uložené ve třídě \textit{DataContainer} jsou poté pomocí třídy \textit{TramodWriter} uloženy do čtyř \textit{SQL Dump} souborů. Tyto čtyři soubory obsahují příkazy v jazyce SQL a je možné je použít pro nahrání záznamů do databáze nástroje TrafficModeller. 
+
+\section{Import dat}
+
+Tato část popisuje načtení dat do nástroje. Vstupními soubory nástroje jsou výstupní \textit{SQL Dump} soubory nástroje \textit{OSM2Po} a výstupní soubor nástroje \textit{osmfilter} ve formátu \textit{osm}. Všechna data jsou v nástroji uložena ve tříde \textit{DataContainer}. Ta obsahuje šest seznamů, které jsou v průběhu aplikace postupně plněny. Těmito seznamy jsou: 
+
+\begin{itemize}
+  \item \textit{Lines} - seznam hran načtených z OSM2Po
+  \item \textit{Vertexes} - seznam vrcholů načtených z OSM2Po
+  \item \textit{ModifiedLines} - seznam obsahující kontejner \textit{LineChangesTree}, který slouží k modifikaci potřebných hran
+  \item \textit{TurnRestrictions} - seznam zákazů odbočení
+  \item \textit{nodes} - seznam bodů, jejichž sledy reprezentují budovy
+  \item \textit{buildings} - seznam budov
+\end{itemize}
+\vspace{10pt}
+
+\subsection{Import dopravní sítě}
+
+O načítání souborů s daty o dopravní síti se stará třída \textit{PoReader}. Do konstruktoru jsou předány názvy souborů a třída si inicializuje potřebné atributy. Následně jsou zavolány metody \textit{executeReadingLines()} pro načtení hran do paměti a \textit{executeReadingVertexes()} pro načtení vrcholů do paměti. Metoda \textit{executeReadingLines()} čte soubor s hranami řádek po řádku a rozhoduje, zda načtený řádek odpovídá reprezentaci jedné hrany. O rozhodnutí, zda textová reprezentace jednoho řádku odpovídá záznamu o hraně rozhoduje metoda \textit{isLine()}. Ta ke svému rozhodování využívá regulární výraz: 
+
+\begin{lstlisting}
+regex = "[(].+[)],?;?"
+\end{lstlisting}
+
+Pokud řádek odpovídá regulárnímu výrazu, uloží jej do seznamu \textit{readLines}. Pokud neodpovídá, uložen není. Každý záznam v seznamu \textit{readLines} tedy odpovídá řetězci obsahující záznam s hranou. V tomto seznamu jsou tedy nadále uložené pouze řádky, které reprezentují právě jednou hranu. Následně je zavolána metoda \textit{fillLines()}, která iteruje přes seznam \textit{readLines} a pomocí metod třídy \textit{String} zpracuje jednotlivé řádky a vytvoří z nich objekty typu \textit{Line} a uloží je do seznamu \textit{Lines} uvnitř třídy \textit{DataContainer}. 
+
+Stejným způsobem jsou zpracovány jednotlivé vrcholy. Třída \textit{PoReader} čte pomocí metody \textit{executeReadingVertexes()} soubor s vrcholy řádek po řádku a obdobně jako u hran rozhoduje, zda je načtený řádek reprezentací jednoho vrcholu. Rozhodování opět probíhá pomocí regulárního výrazu: 
+
+\begin{lstlisting}
+regex = "[(].+[)],?;?"
+\end{lstlisting}
+
+Pokud řádek odpovídá regulárnímu výrazu, uloží jej do seznamu \textit{readVertexes}. Pokud neodpovídá, uložen není. Stejně jako u seznamu \textit{readLines}, každý záznam v tomto seznamu obsahuje textovou reprezentaci právě jednoho vrcholu. Následně je zavolána metoda \textit{fillVertexes()}, která iteruje přes seznam \textit{readVertexes} a pomocí metod třídy \textit{String} zpracuje jednotlivé řádky a vytvoří z nich objekty typu \textit{Vertex}. Tyto záznamy jsou uloženy do seznamu \textit{Vertexes} uvnitř třídy \textit{DataContainer}. 
+
+Po načtení jsou ve třídě \textit{DataContainer} naplněny seznamy \textit{Lines} a \textit{Vertexes}.
+
+\subsection{Import záznamů budov}
+
+Narozdíl od dopravní sítě, není soubor s daty o budovách ve formátu \textit{SQL} příkazů. Tento soubor je ve formátu \textit{osm} a je formátovaný pomocí jazyka \textit{XML}. K načtení budov tedy není vytvořen vlastní parser, ale je použita knihovna \textit{SAXParser}. Té je předána třída \textit{DataContainerHandler}, která obsahuje popis významu jednotlivých značek uvnitř souboru. SAXParser následně pomocí metody \textit{load()} čte soubor s daty o budovách a na základě popisu ve tříde \textit{DataContainerHandler} plní třídu \textit{DataContainer}. Každý uzel je reprezentován třídou \textit{OSMNode} a uložen do rozptylové tabulky \textit{nodes} jejímž klíčem je identifikátor uzlu a hodnotou poté samotná instance uzlu. Budovy jsou reprezentovány třídou \textit{OSMBuilding} a jsou uloženy do seznamu \textit{buildings}.
+
+Po importu záznamu budov jsou ve třídě \textit{DataContainer} naplněny seznamy \textit{Nodes}
+
+\section{Transformace}
+
+O transformaci dat se stará třída \textit{Modifier}. Třídě je v konstrukotru předána instance třídy \textit{DataContainer} obsahující načtená data. Následně je spuštěna metoda \textit{execute()}. Tato metoda postupně spouští veškeré procesy, které data transformují. V této části jsou popsány jednotlivé procesy.
+
+\subsection{Obousměrné hrany}
+
+O první transformaci dat se stará metoda \textit{processLines()}. Tato metoda slouží k vytvoření duplicitní hrany v opačném směru pro každou načtenou obousměrnou hranu. Metoda iteruje přes seznam všechn hran načtených do paměti a detekuje obousměrné hrany pomocí booleanovské metody \textit{isDuplex()}. Metoda se rozhoduje podle hodnoty proměnné \textit{reverse\_cost}. Pokud je tato hodnota \textit{1000000.0}, není hrana obousměrná a metoda vrací hodnotu \textit{false}. Pokud hodnota proměnné \textit{reverse\_cost} není \textit{1000000.0}, je hrana obousměrná a metoda vrací hodnotu \textit{true}. V případě obousměrné hrany vytvoří záznam v hashovací tabulce \textit{modifiedLines}. Klíčem záznamu v tabulce je identifikátor hrany a hodnotou poté instance třídy \textit{LineChangesTree}. Tato třída slouží jako kontejner obousměrných hran, pro které je třeba vytvořit hranu v opačném směru. Obsahuje referenci na originální hranu a současně nově vytvořenou hranu v opačném směru. 
+
+Po nalezení všech obousměrných hran je potřeba najít počáteční identifikátor nově tvořených hran. Počáteční identifikátor je jednoduše získán jako velikost listu \textit{lines}. Data z nástroje OSM2Po pro \textit{n} hran nabývají hodnot \textit{\{1, 2, ..., n\}}, nejsou v nich žádné mezery. Pro \textit{m} nově vytvořených hran budou jejich identifikátory nabývat hodnot \textit{\{n+1, n+2, ... ,n+m\}}. Po nalezení počátečního identifikátoru nově tvořených hran je iterováno přes hashovací tabulku \textit{modifiedLines} a pro každý záznam je volána metoda \textit{modify()} třídy \textit{LineChangesTree}. Tato metoda vytvoří novou hranu, které nastaví nový identifikátor, zamění hodnoty zdrojového a cílového vrcholu a převrátí geometrii. Geometrie je převrácena připsáním řetězce \textit{ST\_REVERSE} před hodnotu geometrie. 
+
+Proces zpracování hran je vidět na obrázku 5.2.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{images/OSM2Tramod_diagrams/ModifierLines.pdf}
+\caption{Zpracování hran}
+\end{figure}
+\vspace{10pt}
+
+\subsection{Zakázané směry}
+
+Dalším procesem spuštěným třídou \textit{Modifier} je zpracování vrcholů. Při zpracování vrcholů jsou vytvořeny záznamy zakázaných směrů, které jsou uloženy v atributu \textit{restrictions} vrcholu. Zákázané směry jsou uloženy do listu \textit{TurnRestrictions} uvnitř třídy \textit{DataContainer}.
+
+Prvním krokem je vytvoření zakázaných směrů z přikázaných směrů. Tento proces je znázorněn na obrázku 4.6.. Program nejdříve vytvoří dvě kopie původního seznamu zákazů a příkazů. Jedna kopie bude sloužit k porovnávání nově vytvořených zákazů s původními příkazy a v druhé kopii budou postupně zaměňovány příkazy za zákazy. Jednotlivé příkazy odbočení jsou ve svém textovém zápisu uloženy do seznamu. Pro každý příkaz odbočení ze seznamu je poté spuštěna metoda \textit{orderToRestriction()}. Vstupními parametry této funkce jsou vrchol obsahující tento příkaz, samotný příkaz v textové podobě a kopie \textit{restrictions}. Výstupem této funkce jsou nově vytvořené zákazy v textové podobě. Metoda ponechá zdrojovou hranu a poté hledá všechny hrany v seznamu původních hran, jejichž zdrojový nebo cílový vrchol je právě vrchol předaný metodě. Důvodem testování zdrojového i cílového vrcholu hrany je prohledávání seznamu všech původních hran (obousměrných i jednosměrných). Může nastat případ, kdy hrana byla obousměrná a tudíž bude v pozdější části zpracování použit nově vytvořený identifikátor pro otočenou hranu. Je-li tedy příkaz ve vrcholu \textit{A} zapsán jako \textit{+x\_y}, jsou nalezeny všechny hrany, pro které platí \textit{src=A}, nebo \textit{trg=A}. Identifikátor této hrany (\textit{z}) je poté zaměněn s identifikátoremm hrany \textit{y} a vznikne tedy nový zákaz \textit{-x\_z}. Tento zákaz je porovnán s kopií původního textového záznamu \textit{restrictions}, zda neexistuje jiný příkaz, který by s tímto zákazem byl totožný. Pokud nalezen není, je zákaz připojen k textové reprezentaci nově tvořených zákazů. Po nalezení všech hran proces končí a metoda vrátí zpět nově vytvořené zákazy a nahradí jimi příslušný původní příkaz. 
+
+Dalším krok je záměna identifikátorů hran z důvodu transformace obousměrných hran. Pro každý zákaz je tedy spuštěn algoritmus zobrazený na obrázku 4.5.. O tento proces se stará metoda \textit{turnRestricionSwitch()}, které je parametrem předán příslušný vrchol a textová reprezentace jednoho zákazu. Metoda zjistí, zda v seznamu modifikovaných hran existuje hrana se stejným identifikátorem. Pokud hranu nenalezne, není identifikátor zdrojové hrany dále zpracováván. Pokud hranu nalezne, je využita třída \textit{LineChangesTree} a je detekováno, zda tento vrchol referencuje původní, či nově vytvořená hrana jako svůj cílový vrchol. Identifikátor odpovídající hrany je potom uložen jako zdrojová hrana tohoto zákazu. Stejným způsobem jsou zpracovány cílové hrany zákazu. Jediným rozdílem je detekce reference vrcholu jako zdrojové hrany místo cílové. 
+
+Posledním krokem je z jednotlivých zákazů vytvořit samostatné záznamy v seznamu \textit{TurnRestrictions} ve třídě \textit{DataContainer}. Textový řetězec s validně modifikovanými zákazy může obsahovat duplicity. Tyto duplicity mohly vzniknout v případě, že v původním řetězci existoval více než jeden příkaz odbočení. V takovém případě mohly být některé příkazy nahrazeny stejnými zákazy. Před uložením nového zákazu odbočení do seznamu je tedy testováno, zda konkrétní zákaz není již v seznamu uložen. Pokud ne, je vytvořen nový záznam, který je uložen do seznamu ve třídě \textit{DataContainer}.
+
+
+\textbf{https://github.com/locationtech/jts}. 
+
+\subsection{Výpočet generátorů dopravy}
+
+V části \textit{Tvorba generátorů dopravy} kapitoly 4.2.2. je popsán způsob výpočtu generátorů dopravy. Tyto generátory jsou počítány ze záznamů budov. Výpočet a přiřazení těchto generátorů křižovatkám probíhá v několika procesech pomocí několika metod, které jsou v této části popsány.
+
+\subsubsection{Převod geometrie}
+
+Prvním procesem je příprava geometrie vrcholů reprezentujících křižovatky. Nástroj OSM2Po využívá hexadecimální zápis geometrie a ten je také načten vlastním nástrojem. Pro přiřazení generátorů křižovatkám je však nezbytné, aby bylo možné s prostorovými daty počítat. Je tedy potřeba tento hexadecimální zápis převést na hodnoty zeměpisné šířky a zeměpisné délky. O to se stará metoda \textit{convertToCoordinates()}. Tato metoda využívá \textit{JTS}. \textit{JTS} je knihovna v jazycce Java umožňující manipulaci s vektorovou gemoetrií. Pomocí této knihovny je uvnitř metody převeden hexadecimální zápis geometrie vrcholu na hodnoty zeměpisné šířky a délky. Takto zaznamenaná geometrie umožňuje další výpočty, které jsou součástí nástroje.
+
+\textbf{https://github.com/locationtech/jts}. 
+
+\subsubsection{Výpočet jednotlivých generátorů}
+
+Dalším procesem je samotný výpočet generátorů. Generátory jsou počítány z budov podle vzorce \ref{plocha_polygonu}. Výpočet je volán metodou \textit{calculateBuildingAreas()}, která iteruje přes seznam načtených budov a pro každou spouští metodu \textit{calculateArea()}, která pomocí uvedeného vzorce vypočítá plochu budovy. Výpočet využívá souřadnic jednotlivých bodů polygonu, který reprezentuje budovu. Tyto souřadnice jsou však načteny ve stupních. Aby výsledná hodnota reprezentovala plochu v $m^2$, je třeba souřadnice převést na metry. O tento převod se stará metoda \textit{degreesToMeters()}.
+
+ \textbf{https://stackoverflow.com/questions/639695/how-to-convert-latitude-or-longitude-to-meters} 
+
+
+Pro přiřazení generátorů správné oblasti je nutné jednoznačně určit, ve které oblasti se budova nachází. Jelikož by plocha budovy mohla zasahovat do více oblastí, k jednoznačnému určení se tedy použije centroid budovy. Vzorec pro výpočet centroidu budovy je uveden v kapitole 4.2.2.. Výpočet je volán metodou \textit{calculateBuildingCentroids()}, která pro každou budovu v seznamu volá metodu \textit{calculateCentroid()}. Narozdíl od plochy, u které bylo potřeba převést souřadnice ze stupňu na metry, souřadnice centroidu jsou také ve stupních. Pro výpočet centroidu je také nutné vypočítat plochu budovy. Abychom však byla zachována konzistence jednotek, výpočet nepoužije již vypočítanou plochu budovy v metrech, avšak vypočítá plochu znovu s hodnotami souřadnic ve stupních. Tento výpočet je zařízen metodou \textit{calculateSphericArea()}. Tímto způsobem jsou tedy vypočítány jednotlivé generátory a centroidy pro každou zaznamenanou budovu. 
+
+\subsubsection{Přiřazení generátorů}
+
+K přiřazení generátorů je nejdříve potřeba inicializovat jednotlivé oblasti. O to se stará metoda \textit{processGrid()}. Metoda nejdříve spustí inicializaci třídy \textit{Grid} uložené ve třídě \textit{DataContainer}. Během inicializace mřížky je nastaven počet čtverců požadovaný uživatelem a pomocí hranic oblasti uložené ve třídě \textit{OSMBounds} vypočteny přírustky zeměpisné šířky a zeměpisné délky tak, jak je popsáno v kapitole 4.2.2. v části \textit{Tvorba generátorů dopravy}. V poslední řadě je inicializována hashovací tabulka, jejíž klíčem je třída \textit{GridLocator} a hodnotou třída \textit{Tile} reprezentující jednu dlaždici. Samotné instance jednotlivých dlaždic v tuto chvíli vytvořeny nejsou. 
+
+Metoda \textit{processGrid()} po inicializaci spustí metodu \textit{calculateGenerators()} třídy \textit{Grid}. Metoda iteruje přes seznam všech načtených budov. U každé budovy je nejdříve zkontrolováno, zda je vypočtený centroid budovy uvnitř hranic celé oblasti. Následně je pomocí přírustků detekována dlaždice, ve které se budova nachází. K detekování dlaždice se využívá právě třída \textit{GridLocator}. Třída \textit{GridLocator} reprezentuje pomyslnou souřadnici dlaždice. Má uložené dva atributy, které reprezentují pořadí dlaždice v horizontálním a vertikálním směru. Pro budovu je tedy nalezena souřadnice dlaždice, ve které se nachází. Pokud v hashovací tabulce ještě neexistuje záznam na této souřadnici, je dlaždice vytvořena a je v ní nastavena hodnota generátoru budovy. Pokud již v hashovací tabulce záznam na této souřadnici existuje, je generátor z budovy přičten k již existující hodnotě generátoru uvnitř dlaždice. Tímto způsobem je zařízeno, že jsou v paměti vytvořeny pouze dlaždice tam, kde se vyskytují generátory vyskytují. 
+
+Další částí je přiřazení generátorů křižovatkám. Podle kapitoly 4.2.2 jsou generátory přiřazeny křižovatce, která je nejblíže středu (centroidu) dlaždice. O přiřazení generátorů se stará metoda \textit{assignTrafficGenerators()}. Tato metoda iteruje přes seznam načtených křižovatek. Pro každou křižovatku zjistí souřadnici dlaždice, ve které se nachází, stejným způsobem jako metoda \textit{calculateGenerators} pro budovy. Opět je testováno, zda v hashovací tabulce mřížky existuje dlaždice s touto souřadnicí (v hashovací tabulce se vyskytuje záznam s tímto klíčem). Pokud dlaždice neexistuje, je vytvořena a křižovatka dlaždici nastavena. Pokud existuje, je pomocí booleanovské metody \textit{isCloser()} detekováno, zda je blíže centroidu dlaždice, než dosud nejbližší křižovatka. Pokud ano, je tato křižovatka mřížce nastavena jako dosud nejblížší. Po skončení metody jsou dlaždicím přiřazeny křižovatky nejbližší jejich centroidům. 
+
+Posledním procesem je ošetření situací, kdy se v dlaždici vyskytují budovy a má tedy generátor dopravy, ale zároveň neobsahuje žádnou křižovatku. O toto přiřazení se stará metoda \textit{assignVertexlessGenerators()}. Tato metoda s využitím třídy \textit{GridLocator} držící souřadnice dlaždic prohledá okolní dlaždice a najde takovou, která má největší hodnotu generátoru. K takové dlaždici je poté generátor dopravy přičten a je přiřazen k příslušné křižovatce. Pokud v hashovací tabulce není vytvořena žádná taková dlaždice, nebo nelze nalézt dlaždici, která obsahuje křižovatku, je uživateli vypsána hláška, že zvolil příliš jemné dělení oblasti a tento generátor není přiřazen. 
+
+V poslední řadě je znovu iterováno přes vytvořené dlaždice a každé je přiřazen identifikátor pro účely importu do databáze. To má na starost metoda \textit{assignZoneIDs()}.
+
+\section{Export dat}
+
+Výstupem nástroje jsou čtyři SQL Dump soubory, pomocí kterých lze nahrát data do databáze nástroje Traffic Modeller. O vytvoření těchto souborů se stará třída \textit{TramodWriter}. Třída obsahuje tyto metody, z nichž každá vytvoří příslušný soubor a naplní jej daty. Těmito metodami jsou: 
+
+\begin{itemize}
+  \item \textit{executeWritingScheme()} - vytvoří soubor, jenž vytvoří tabulky v databázi
+	\item \textit{executeWritingLines()} - vytvoří soubor s hranami reprezentující vozovky
+	\item \textit{executeWritingTurnRestrictions()} vytvoří soubor se zakázanými směry
+	\item \textit{executeWritingVertexes()} - vytvoří soubor s vrcholy reprezentující křižovatky
+	\item \textit{executeWritingZones()} - vytvoří soubor s generátory dopravy
+\end{itemize}
+
+Každá metoda prochází příslušný seznam uložený ve třídě \textit{DataContainer}. Všechny třídy reprezentující příslušné elementy mají implementovanou metodu \textit{toSQLString()}, která příslušná data vypíše v syntaxi jazyka SQL. V každé metodě je tedy iterováno přes seznamy elementů a pro každý element volána tato metoda. Do všech souborů je vypisováno pomocí třídy \textit{FileWriter} knihovny \textit{java.io}
+
+\section{Docker}
+
+Aplikace je dockerizována, což umožňuje její nasazení v serverovém prostředí. Je zabalena do kontejneru, což je zapouzdřené prostředí, které obsahuje pouze požadované nástroje a pro ně specifické soubory a knihovny. Těmito nástroji jsou popisované nástroje \textit{OSM2Po}, \textit{osmium}, \textit{osmfilter} a vlastní nástroj. Nástroj \textit{OSM2Po} je naprogramovaný v jazyce Java a je spustitelný přes přiložený \textit{JAR} soubor. Současně musí být dockeru předány nástroje pro práci s Javou, tedy JDK. Nástroj \textit{osmium} je součástí klasických repozitářů systému Ubuntu a je tedy možné jej v dockeru nainstalovat pomocí package manageru. Nástroj \textit{osmfilter} je napsaný v jazyce \textit{C}. Zdrojový soubor je také potřeba přeložit a dockeru nainstalovat a proto musí být dockeru předán kompilátor jazyka \textit{C} - \textit{gcc}. V poslední řadě vlastní nástroj je také naprogramován v Javě a je sestaven pomocí software \textit{Apache Maven}.
+
+Konfigurace, pomocí které je aplikace dockerizována, je uložena v souboru \textit{Dockerfile}. Bázovým obrazem (z angl. \textit{base image}) , který je v Dockeru využit je \textit{Ubuntu:jammy}. Pomocí package manageru tohoto systému \textit{apt-get} jsou nainstalovány potřebné nástroje a knihovny. Těmi jsou: 
+
+\begin{itemize}
+	\item \textit{gcc} - překladač jazyka \textit{C}, pro nástroj \textit{osmfilter}
+	\item \textit{openjdk 8} - java pro nástroje osm2po a nástroj vytvořený v rámci projektu
+	\item \textit{Apache Maven} - nástroj sestavení vytvořené aplikace
+	\item \textit{Osmium} - Nástroj ke konverzi formátu souboru s daty OSM
+\end{itemize}
+
+V souboru \textit{Dockerfile} je dále popsáno kopírování souborů a kompilace jednotlivých aplikací. Na konci je spuštěn shell script, který vykonává proces na obrázku 4.3. 
+
+Samotná dockerizace a spuštění je provedena pomocí samostatného shellscriptu, který zkontroluje počet vstupních parametrů, nastaví dockeru proměnné a spustí dockerizaci pomocí nástroje \textit{docker-compose}. Po skončení dockerizace a běhu všech nástrojů jsou ve výstupní složce definované uživatelem k nalezení výstupní soubory nástroje. 
+
+
+
+
+
+
+

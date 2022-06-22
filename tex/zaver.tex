@@ -1,0 +1,10 @@
+\chapter{Závěr}
+
+V diplomové práci byla obecně popsána geografická data a ETL proces na ně zaměřený. Byly představeny a detailně popsány datové struktury OpenStreetMap a nástroje Traffic Modeller. Byl navržen a implementován nástroj schopný konverze dat z datové struktury OpenStreetMap do datové struktury nástroje Traffic Modeller. Byl popsán proces konverze mezi datovými strukturami využívaný implementovaným nástrojem, včetně analýzy a popisu externích modulů, které byly pro konverzi použity. Konverzní nástroj byl testován na dvou pilotních územích. Těmito testy byla prokázána správná funkcionalita. Výsledné datasety byly nahrány do požadované databáze nástroje Traffic Modeller. Během testů byla zjištěna ztráta méně než 0,2\% dat, která nemá zásadní vliv na kvalitu výsledného modelu.
+
+Výsledný nástroj byl dockerizován, což umožňuje jeho využití na serveru. Součástí diplomové práce byla vytvořena uživatelská dokumentace popisující způsob použití implementovaného konverzního nástroje s popisem povinných i volitelných vstupů.
+
+Vytvořený nástroj dokáže převést data OpenStreetMap libovolného území do datové struktury vyžadované nástrojem Traffic Modeller. Toto umožňuje automatizace přípravy dat pro simulaci různých dopravních situací na libovolném území nástrojem Traffic Modeller. Tato práce dokázala, že odhad intenzity dopravy lze ze zdrojových dat uskutečnit, avšak kvůli nedostatkům popsaných v diskuzi je nutná kalibrace odhadu pro zvýšení jeho kvality. Kvalitnějšího modelu lze dosáhnout definicí a implementací přesnějších algoritmů pro výpočet jednotlivých generátorů, rozdělení oblasti a přiřazení generátorů křižovatkám do vytvořeného konverzního nástroje.
+
+
+

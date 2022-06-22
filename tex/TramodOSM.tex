@@ -1,0 +1,171 @@
+\chapter{Datové struktury zdrojového a cílového nástroje}
+\label{chapter:datove_struktury_osm_tramod}
+
+Tato kapitola se věnuje datovým strukturám zdrojového a cílového nástroje. Popisuje tak druhý a třetí krok pětikrokového procesu harmonizace dat popsaného v kapitole ETL. V první části je popsána struktura cílových dat nástroje Traffic Modeller, pro který jsou data připravována. Druhá část věnována zdrojové datové struktuře databáze OpenStreetMap, která může být pro nástroj Traffic Modeller použita. 
+
+\section{Traffic Modeller}
+\label{section:TraMod}
+
+Cílem práce je transformovat data silniční sítě tak, aby vyhovovala nástroji Traffic Modeller. Nástroj Traffic Modeller, neboli \textit{TraMod}, je nástroj sloužící k modelování dopravy vyvíjený na Západočeské univerzitě ve spolupráci s organizacemi Plan4All, EDIP, HSRS a RoadTwin. Jejím uživatelům umožňuje simulovat a tak testovat různé dopravní scénáře. Nástroj je službou běžící na serveru a je možné ho užívat bez nutnosti jakékoliv instalace či znalosti jiného software modelujícího dopravu. Nástroj je možné využívat pomocí webové aplikace, která je pro náhled dostupná na \url{https://intenzitadopravy.plzen.eu/}. Pro aktivní práci v současné době není dostupná široké veřejnosti. Nástroj poskytuje API, což umožňuje vývojářům integrovat funkce nástroje do dalších mobilních či desktopových aplikací. \textbf{https://trafficmodeller.com}
+
+Traffic Modeller využívá dopravní model k simulování toku dopravy. Dopravním modelem rozumíme matematický model skutečné dopravy, který určuje hustotu dopravy (počet vozidel) v úsecích dopravní sítě. Tento model je reprezentovaný orientovaným grafem. Ke správnému fungování modelu jsou zapotřebí tři vstupy. Prvním vstupem je dobře definovaná směrovatelná silniční síť, která popisuje přípustné pohyby v síti uvnitř pozorovaného modelu. Tento model musí odpovídat skutečnosti a jakákoliv nesouvislost s reálnou situací zvyšuje odchylku od reálného modelu dopravy. Odchylku simulovaného modelu od reálného určuje GEH statistika \textbf{https://content.tfl.gov.uk/traffic-modelling-guidelines.pdf}. Krom topologie je také důležité, aby parametry dopravního modelu odpovídaly skutečnosti. Nepřesnosti mohou mít za následky nerealistické simulace. Tou může být například hromadící se doprava, kvůli chybnému určení maximální rychlosti na určitém úseku vozovky v simulovaném modelu. Druhým vstupem jsou pak generátory dopravy, které reprezentují přírůstky dopravy v různých místech modelu. Třetím vstupem jsou pak kalibrační data modelu, které však nejsou předmětem diplomové práce a nejsou zde tedy popsána \textbf{https://iccgis2020.cartography-gis.com/8ICCGIS-Vol1/8ICCGIS\_Proceedings\_Vol1\_(56).pdf}. 
+
+\subsection{Datová struktura}
+
+Datová struktura nástroje je uložena v databázi popsané v dokumentaci datové struktury nástroje Traffic Modeller na serveru Gitlab \textit{https://gitlab.com/tramod/tramod-data-model}. Databázový model je rozdělen na několik částí. První částí je model dopravní infrastruktury popsaný pomocí tabulek uzlů a hran. Různá omezení pohybu v této síti jsou zanesena v tabulce zakázaných směrů. Další částí jsou pak socioekonomická data popsána generátory dopravy a kalibračními daty.
+
+\begin{itemize}
+  \item \textit{node} - tabulka uzlů
+  \item \textit{edge} - tabulka hran
+  \item \textit{zone} - zóny reprezentující generátory dopravy
+  \item \textit{turn\_restriction} - tabulka zákazů odbočení
+\end{itemize}
+
+Reprezentace dat pomocí uvedených tabulek je znázorněna na obrázku \ref{Tramod_struktura} převzatého z \textbf{Potenciál interaktivního dopravního modelování pro územní plánování měst, Diplomová práce, Bc. Petr Trnka, 2022, vedoucí práce: Karel Jedlička KGM}. 
+
+\begin{sidewaysfigure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{images/OSM2Tramod_diagrams/Tramod_data_structure.png}
+\caption{Grafické schéma TraMod}
+\label{Tramod_struktura}
+\end{sidewaysfigure}
+
+Nástroj navíc obsahuje tabulku \textit{odm} (origin-destination matrix). Tato tabulka slouží ke kalibraci dat. Kalibrace dat není předmětem této práce a proto tato tabulka není dále popisována. 
+
+\subsubsection{Uzly}
+
+Tabulka uzlů v nástroji označuje křižovatky. Na každém místě, kde se komunikace fyzicky kříží musí existovat v datech nástroje Traffic Modeller právě jeden uzel. Uzel obsahuje svůj identifikátor a také hodnotu geometrie, která v sobě nese geografické údaje o jeho poloze. Vrchol také existuje v bodě konce vozovky (např. na konci slepé ulice). Zde jsou uvedeny jednotlivé sloupce tabulky uzlů: 
+
+\vspace{10pt}
+\begin{itemize}
+  \item \textit{node\_id} - identifikátor uzlu
+  \item \textit{geometrie} - geometrie typu \textit{Point} v souřadnicovém systému WGS84
+\end{itemize}
+\vspace{10pt}
+
+\subsubsection{Hrany}
+
+Tabulka hran (\textit{edge}) obsahuje všechna spojení mezi uzly. Každá komunikace od křižovatky ke křižovatce je zaznamenána právě jednou hranou. Každá hrana obsahuje svůj identifikátor, referenci na zdrojový uzel, cílový uzel a geometrii. Tvoří tedy jednosměrnou orientovanou hranu. Pokud mezi dvěma uzly \textit{A} a \textit{B} existuje obousměrná komunikace, musí v tabulce existovat dvě hrany s unikátními identifikátory. První záznam bude mít uvedený uzel \textit{A} jako zdrojový a uzel \textit{B} jako cílový a druhý záznam bude mít uvedený uzel \textit{B} jako zdrojový a uzel \textit{A} jako cílový. Pokud je silnice mezi uzly \textit{A.B} jednosměrná, existuje pouze jedna hrana, která obsahuje uzel \textit{A} jako zdrojový a \textit{B} jako cílový. Hodnota geometrie určuje polohu a tvar křivky, která příslušnou komunikaci reprezentuje. Pokud vozovka obsahuje více pruhů, je stále reprezentována pouze jednou hranou. Jedna hrana v databázi je tedy svým identifikátorem, identifikátorem zdrojového a cílového uzlu. Obsahuje také několik dalších záznamů, které jsou uvedeny v následujícím výčtu:   
+
+\vspace{10pt}
+\begin{itemize}
+  \item \textit{edge\_id} - identifikátor uzlu
+  \item \textit{source} - geometrie elementu
+  \item \textit{target} - geometrie elementu
+  \item \textit{capacity} - počet vozů, které mohou hranou projet za hodinu
+  \item \textit{cost} - cena za projetí této cesty (čas)
+  \item \textit{isvalid} - atribut sloužící pro plánované cesty (true = cesta existuje, false = cesta je plánována)
+  \item \textit{turn\_restriction} - zákazy, či příkazy odbočení v textové podobě
+  \item \textit{speed} - maximální povolená rychlost v km/h
+  \item \textit{road\_type} - třída vozovky
+  \item \textit{geometry} - geometrie typu \textit{LineString} v souřadnicovém systému WGS84
+\end{itemize}
+\vspace{10pt}
+
+\subsubsection{Zakázané směry}
+
+Tabulka zakázaných směrů (turn\_restriction) obsahuje záznamy pro všechny zákazy odbočení na mapě. Obsahuje identifikátor křižovatky (uzlu), ke kterému náleží, identifikátor zdrojové hrany a identifikátor cílové hrany. Pokud tedy nelze z komunikace (hrany) \textit{A} na křižovatce (uzlu) \textit{X} odbočit na komunikaci \textit{B}, bude v tabulce uveden záznam s identifikátorem uzlu \textit{X}, zdrojovou hranou \textit{A} a cílovou hranou \textit{B}. Pokud je na na jedné křižovatce zákazů více, bude pro každý zákaz v tabulce jeden záznam. Nástroj Traffic Modeller neobsahuje způsob pro uchování příkazů odbočení. Pokud se na nějaké křižovatce vyskytuje přikázané odbočení, budou zakázány všechny ostatní možnosti odbočení a tyto zákazy budou zaneseny do tabulky. Zde jsou uvedeny jednotlivé sloupce tabulky zakázaných směrů. 
+
+\begin{itemize}
+  \item \textit{node\_id} - identifikátor uzlu 
+  \item \textit{from\_edge\_id} - zdrojová hrana
+  \item \textit{to\_edge\_id} - cílová hrana
+  \item \textit{cost} - cena za projetí křižovatky v tomto směru
+\end{itemize}
+\vspace{10pt}
+
+\subsubsection{Generátory dopravy}
+
+Tabulka zón \textit{zone} reprezentuje tzv. \textit{generátory dopravy}. Generátor dopravy je odhad počtu vozidel, které budou denně vyjíždět z oblasti jím vymezeném. Počet vozidel je odhadován na základě počtu, plochy a typu budov, které leží v jedné vymezené zóně. Generátor jednotlivých oblastí je poté přiřazen vhodné křižovatce, kterou poté nástroj TraMod využivá k modelování dopravních situací. Jednotlivé sloupce tabulky zón jsou popsány 
+
+\begin{itemize}
+  \item \textit{zone\_id} - identifikátor generátoru dopravy
+  \item \textit{node\_id} - identifikátor křižovatky s přiřazeným generátorem
+  \item \textit{trips} - odhadovaná hodnota generátoru dopravy
+  \item \textit{geometry} - geometrie centroidu zóny typu \textit{Point} v souřadnicovém systému WGS84
+\end{itemize}
+\vspace{10pt}
+
+Jak již bylo řečeno tabulky databáze napovídají, silniční síť je v nástroji Traffic Modeller reprezentována grafovou strukturou. Vrcholy tohoto grafu označují křižovatky a hrany grafu reprezentují silnice, které křižovatky spojují. Taková reprezentace umožňuje nástroji modelovat dopravu pomocí algoritmů užívaných pro různé grafové problémy, jako je například hledání nejkratší cesty mezi dvěma uzly.
+
+
+
+\section{OpenStreetMap}
+\label{section:OpenStreetMap}
+
+Data pro nástroj Traffic Modeller mohou být vytvořena manuálně pro každé území zájmu, avšak je také možné jej naplnit veřejně dostupnými daty. OpenStreetMap (\textit{OSM}) je veřejná databáze poskytující zeměpisná data. Projekt v roce 2004 založil Steve Coast. Je tvořena komunitou uživatelů, kteří přidávají a udržují data o silnicích, cestách, kavárnách, železničních stanicích a mnohém dalším po celém světě. Mezi přispěvateli lze najít profesionály z oblasti GIS, techniky spravující OSM, amatérské kreslíře map, či humanitární pracovníky. OSM tvoří otevřená data, která mohou být využívána k libovolným účelům pod licencí ODbL. Open Database License (ODbL) je copyleftová ("Share Alike") licence, která umožňuje uživatelům svobodně sdílet, upravovat a používat databázi za podmínky poskytnutí stejné svobody ostatním uživatelům. Data tak mohou být použita, pokud je uvedeno autorství OSM a jeho přispěvatelů. Pokud jsou data jakýmkoliv způsobem upravována, či rozšiřována, je možné výsledek šířit pod stejnou licencí \textbf{https://opendatacommons.org/licenses/odbl/1-0/}.
+
+\subsection{Export dat}
+
+Data OSM lze získat různými způsoby. Samotný portál \url{openstreetmap.org} umožňuje export dat do souboru formát PBF nebo OSM. Formát PBF je komprimovaným formátem, zatímco OSM je založen na formátu XML. Portál samotný omezuje export do souboru na oblast maximálně 0.25\degree čtverečních, nebo na oblast obsahující nejvýše 50 000 bodů. Existují ale i jiné portály, které lze pro získání dat využít.
+
+Jedním z nich je portál \url{geofabrik.de}, který spravuje pravidelně aktualizované extrakty kontinentů zemí a vybraných měst. Omezením portálu je možnost stažení pouze již vymezených extraktů a není tedy možné ručně vybrat oblast. Dalším nástrojem pro export dat je portál bbbike \url{extract.bbbike.org}, který umožňuje vymezit požadované území. Oproti portálům OSM a GeoFabrik navíc umožňuje vybrat data uvnitř vymezeného polygonu a není tak omezený na obdelníkový tvar území.  Jeho omezením je maximální oblast o velikost 25 000 000 kilometrů čtverečních nebo maximální velikost požadovaného souboru 512MB.
+
+\textbf{https://alga.win.tue.nl/tutorials/openstreetmap/}
+
+\subsection{Datová struktura}
+\label{datova_struktura_osm}
+
+Data v OSM jsou uložena v jednoduché datové struktuře, která je tvořena třemi typy elementů. Těmito typy jsou \textit{nodes} (uzly), \textit{ways} (cesty) a \textit{relations} (relace). Všechny tři typy elementů mohou mít přiřazen jeden nebo více atributů (\textit{tags}), které popisují význam jednotlivých elementů a tvoří tak popisnou složku dat. Dle části \ref{section:reprezentace_geodat} se tak jedná o hierarchický model. Pro každý typ elementu je vybrán příklad jeho zápisu ze souboru ve formátu OSM. 
+
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.8\textwidth]{images/OSM2Tramod_diagrams/OSM_data_structure.jpeg}
+\caption{Datová struktura OSM}
+\label{OSM_datova_struktura}
+\end{figure}
+
+Uzly (\textit{nodes}) reprezentují jednobodové elementy v mapě. Jsou definovány svým identifikátorem a zeměpisnou šířkou a délkou. Mohou reprezentovat elementy na mapě, které jsou samostatně stojící a k jejich popisu uzel stačí. Mohou tak být reprezentovány například lavičky v parku, lampy apod. Význam takových uzlů je určen právě pomocí značky. Uzly jsou také využívány k určení tvaru vícebodových elementů. V takovém případě nemusí všechny uzly obsahovat značku, která by určila jejich význam.
+
+Příklad záznamu uzlu v souboru formátu OSM. 
+\begin{lstlisting}
+<node id="32665891" lat="49.7534179" lon="13.5889677"/>
+\end{lstlisting}
+
+Cesty (\textit{ways}) reprezentují nejednobodové elementy a jsou tvořeny sledem (seřazeným listem) referencovaných bodů. Sled může kvůli omezení OSM obsahovat dva až dva tisíce uzlů. Uzly mají tedy dvojí funkci. Jsou buď samostatně stojícími elementy, či součástí cest. Cesty mohou reprezentovat dva typy elementů. Prvním typem elementu jsou neuzavřené cesty (křivky). Tedy cesty jejichž první a poslední uzel se neshodují. Je možné takto reprezentovat silnice, různé lesní cesty, řeky, či vedení elektrického napětí. Druhým typem elementu, který je možné cestou reprezentovat jsou uzavřené cesty (hranice polygonu). V takovém případě je první a poslední uzel v cestě stejný. Tímto způsobem lze do OSM zanést například budovy, vodní plochy, či lesy. Význam cest je opět uchováván pomocí značek. Důležité je mít na paměti, že i některé silnice mohou být zaneseny pomocí cesty, která bude mít první a poslední uzel stejný. Typickým příkladem je kruhový objezd. K rozlišení je nutné prozkoumat značky, které v takové chvíli musí jasně určit, zda se jedná o nějaký element vyjadřující plochu, či nějaký cyklický element. 
+
+Příklad záznamu cesty v souboru formátu OSM. 
+
+\begin{lstlisting}
+<way id="225524966">
+    <nd ref="2342966753"/>
+    <nd ref="2342966733"/>
+    <nd ref="2342966748"/>
+    <nd ref="2342966753"/>
+</way>
+\end{lstlisting}
+
+Třetím typem elementu jsou relace (\textit{Relations}). Relace jsou víceúčelovou datovou strukturou, která poisuje vztah mezi dvěma či více elementy (uzly, cestami, či jinými relacemi). Typickým příkladem může být seznam silnic, které dohromady tvoří dálnici, či trasu linky městské hromadné dopravy. Dalším příkladem může být zákaz odbočení, který vyjadřuje ze které cesty není možné na kterou cestu odbočit. Jiným přikladem může být vícebodový polygon, který reprezentuje vnější hranici nějakého plošného elementu a nevyplněná plocha v něm je popsána druhým polygonem tvořícím vnitřní hranici. Význam těchto relací je vždy určen pomocí značek. Typicky bude mít relace značku \textit{type}, která určí typ této relace. Relace jsou vyjádřeny seřazeným listem uzlů, cest, či jiných relací. 
+
+Příklad záznamu relace v souboru formátu OSM. 
+
+\begin{lstlisting}
+<relation id="13825735">
+    <member type="way" ref="1033228210" role="inner"/>
+    <member type="way" ref="244532456" role="outer"/>
+</relation>
+\end{lstlisting}
+
+K určení elementů, které cesty, relace a jednotlivé body reprezentují se využívají tzv. atributy (tags). Značky je možné přiřadit k jednotlivým uzlům, celým cestám, či relacím. Atributy obsahují klíč a hodnotu. Klíč je užíván k definování názvu objektu a hodnota k definování jeho hodnoty. Některé atributy hodnotu nepotřebují, užívá se potom klíčové slovo \textit{yes}.
+
+Příklady atributů elementů:
+
+\begin{itemize}
+  \item jednobodové - \textit{shop=supermarket}
+  \item neuzavřené cesty (křivky) - \textit{highway=motorway}
+  \item uzavřené cesty (polygony) - \textit{building=yes}
+\end{itemize}
+
+Příklad záznamu atributů uvnitř relace v souboru formátu OSM: 
+\begin{lstlisting}
+<relation id="13525552">
+    <member type="way" ref="991947215" role="outer"/>
+    <member type="way" ref="1009915444" role="outer"/>
+    <tag k="building" v="yes"/>
+    <tag k="public_transport" v="station"/>
+    <tag k="type" v="multipolygon"/>
+</relation>
+\end{lstlisting}
+
+Portál openstreetmap.org umožňuje zobrazit značky jednotlivých elementů. Značky jednotlivých elementů jsou uživateli zobrazeny po kliknutí na element pomocí funkce \textit{Průzkum prvků}. 
